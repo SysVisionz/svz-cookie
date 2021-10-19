@@ -1,4 +1,4 @@
-# CookieManager
+# SVZCookie
 
 This module provides four management classes for manipulating Numbers, Objects, Cookies, and Dates in ways with multiple use cases I've employed on a number of occasions.
 
