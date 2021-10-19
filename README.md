@@ -9,10 +9,10 @@ To install, in terminal type
 	npm i --save svz-cookie
 ```
 
-then, in your react project,
+then, in your project,
 
 ```
-import SVZCookie from svz-cookie;
+import SVZCookie from 'svz-cookie';
 ```  
 
 ## Constructor
