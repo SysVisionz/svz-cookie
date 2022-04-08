@@ -88,4 +88,7 @@ Initial release.
 1.1
 -Refactor, and addition of cookie as the valueOf.  
 -JSON.parse and toJSON will now return the JSON as object contents of the cookie, rather than the cookie object itself.  
--getFull now returns all cookies as SVZCookies.
+-getFull now returns all cookies as SVZCookies.  
+
+2.0  
+-Now with typescript!

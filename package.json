@@ -1,6 +1,6 @@
 {
   "name": "svz-cookie",
-  "version": "1.1.1",
+  "version": "2.0.10",
   "description": "A tool for managing Cookies more easily",
   "keywords": [
     "cookie",
@@ -8,10 +8,11 @@
     "utilities",
     "management"
   ],
-  "main": "./build/index.js",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "start": "webpack --watch",
-    "build": "webpack"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -27,10 +28,11 @@
     "@babel/core": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",
     "@babel/preset-env": "^7.7.4",
+    "@babel/preset-typescript": "^7.16.7",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "typescript": "^4.6.3",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"
-  },
-  "dependencies": {}
+  }
 }

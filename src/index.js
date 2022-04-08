@@ -1,145 +1,155 @@
-class SVZCookie {
-
-	constructor(name){
-		this.name = name;
-		this.pVals = {};
-	}
-
-	toJSON = () => {
-	    return this.value
+module.exports = class SVZCookie {
+    constructor(name, parameters = {}) {
+        this.value = value;
+        this.name = name;
+        this.pVals = parameters;
     }
-
-	get value(){
-		return this.constructor.get(this.name)
-	}
-
-	get path(){
-		return this.parameters.path;
-	}
-	get domain(){
-		return this.parameters.domain;
-	}
-
-	get expires(){
-		return this.parameters.expires;
-	}
-	
-	get secure(){
-		return this.parameters.secure;
-	}
-	get maxAge(){
-		return this.parameters.maxAge;
-	}
-	get sameSite(){
-		return this.parameters.sameSite;
-	}
-
-	get parameters(){
-		return this.pVals;
-	}
-
-	set value (value) {
-		return this.constructor.set(this.name, value, this.parameters);
-	}
-
-	set expires(value){
-		this.parameters.expires = value;;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	set path(value){
-		this.parameters.path = value;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	set domain(value){
-		this.parameters.domain = value;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	set maxAge(value){
-		this.parameters.maxAge = value;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	set parameters(parameters){
-		this.pVals = parameters;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	set sameSite(value){
-		this.pVals.sameSite = value;
-		this.constructor.set(this.name, this.value, this.parameters)
-	}
-
-	delete(){
-		this.constructor.delete(this.name)
-	}
-
-	static set (name, value, parameters) {
-		if (typeof value === 'object'){
-			value = JSON.stringify(value)
-		}
-		if (name && value){
-			let cookieString = name + '=' + value + ';';
-			if (parameters){
-				for (const i in parameters){
-					if (i === 'expires'){
-						const date= typeof parameters.expires === 'object' ? parameters.expires : new Date(parameters.expires);
-						cookieString += ' expires=' + date.toUTCString() + ';';
-					}
-					if (i === 'path'){
-						cookieString += parameters.path.charAt(0) === '/' ? parameters.path : ' /' + parameters.path + ';';
-					}
-					if (i === 'secure'){
-						cookieString += ' secure;';
-					}
-					if (i === 'sameSite'){
-						cookieString += ' samesite='+parameters.sameSite + ';';
-					}
-					if (i === 'maxAge'){
-						cookieString += ' max-age='+parameters.maxAge + ';';
-					}
-				}
-			}
-			document.cookie = cookieString;
-		}
-		else {
-			throw 'TypeError: Requires (name, value, [parameters]) arguments';
-	    }
-	}
-
-    static get (name) {
-		const cookieStrings = (decodeURIComponent(document.cookie).split(';')).map(a => a.trim());
-		for ( let i in cookieStrings) {
-			i = Number.parseInt(i);
-			let curr = cookieStrings[i].trim();
-			if (curr.indexOf(name) === 0){
-				curr = curr.substring(name.length);
-				try {
-					return JSON.parse(curr)
-				}
-				catch {
-    				return curr;
-				}
-			}
-		}
-	}
-
-	static getFull(){
-		return decodeURIComponent(document.cookie).split(';').map(a => {
-			return new this(a.trim().substr(0, a.trim().indexOf('=') ))
-		})
+    toJSON = () => {
+        return this.value;
+    };
+    valueOf() {
+        return this.value;
     }
-
+    get value() {
+        return SVZCookie.get(this.name, true);
+    }
+    get path() {
+        return this.parameters.path;
+    }
+    get domain() {
+        return this.parameters.domain;
+    }
+    get expires() {
+        return this.parameters.expires;
+    }
+    get secure() {
+        return this.parameters.secure;
+    }
+    get maxAge() {
+        return this.parameters.maxAge;
+    }
+    get sameSite() {
+        return this.parameters.sameSite;
+    }
+    get httpOnly() {
+        return this.parameters.httpOnly;
+    }
+    get parameters() {
+        return this.pVals;
+    }
+    set value(value) {
+        SVZCookie.set(this.name, value, this.parameters);
+    }
+    set expires(value) {
+        this.parameters.expires = value;
+        ;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    set path(value) {
+        this.parameters.path = value;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    set domain(value) {
+        this.parameters.domain = value;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    set maxAge(value) {
+        this.parameters.maxAge = value;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    set parameters(parameters) {
+        if (parameters.maxAge) {
+            parameters.maxAge;
+        }
+        this.pVals = parameters;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    set sameSite(value) {
+        this.pVals.sameSite = value;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
+    delete() {
+        SVZCookie.delete(this.name);
+    }
+    static set(name, value, parameters) {
+        var _a;
+        if (name && value) {
+            switch (value.constructor.name) {
+                case 'Object':
+                case 'Array':
+                    value = `JSON:${JSON.stringify(value)}`;
+                case 'Date':
+                    value = `${value.constructor.name}:${value.toJSON()}`;
+                case 'Number':
+                case 'Boolean':
+                    value = `${value.constructor.name}:${value}`;
+                default:
+                    value = typeof value === "object" ? `JSON:${JSON.stringify(value)}` : `String:${value}`;
+            }
+            let cookieString = name + '=' + encodeURIComponent(value) + ';';
+            if (parameters) {
+                for (const i in parameters) {
+                    if (parameters[i]) {
+                        switch (i) {
+                            case 'expires':
+                                const date = typeof (parameters === null || parameters === void 0 ? void 0 : parameters.expires) === 'object' ? parameters === null || parameters === void 0 ? void 0 : parameters.expires : new Date(parameters === null || parameters === void 0 ? void 0 : parameters.expires);
+                                cookieString += ' expires=' + date.toUTCString() + ';';
+                                break;
+                            case 'path':
+                                cookieString += ((_a = parameters === null || parameters === void 0 ? void 0 : parameters.path) === null || _a === void 0 ? void 0 : _a.charAt(0)) === '/' ? parameters === null || parameters === void 0 ? void 0 : parameters.path : ' /' + (parameters === null || parameters === void 0 ? void 0 : parameters.path) + ';';
+                                break;
+                            case 'secure':
+                                cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' secure;' : "";
+                                break;
+                            case 'sameSite':
+                                cookieString += ' samesite=' + (parameters === null || parameters === void 0 ? void 0 : parameters.sameSite) + ';';
+                                break;
+                            case 'maxAge':
+                                cookieString += ' max-age=' + (parameters === null || parameters === void 0 ? void 0 : parameters.maxAge) + ';';
+                                break;
+                            case 'domain':
+                                cookieString += ' domain=' + (parameters === null || parameters === void 0 ? void 0 : parameters.domain) + ';';
+                                break;
+                            case 'httpOnly':
+                                cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' HttpOnly;' : '';
+                                break;
+                        }
+                    }
+                }
+            }
+            document.cookie = cookieString;
+        }
+        else {
+            throw 'TypeError: Requires (name, value, [parameters]) arguments';
+        }
+    }
+    static get(name, asPlainObject) {
+        return this.getFull(asPlainObject)[name];
+    }
+    static getFull(asPlainObject) {
+        return document.cookie.split(';').reduce((cookie, val) => {
+            let [key, value] = val.split('=');
+            if (asPlainObject) {
+                return new SVZCookie(key.trim());
+            }
+            const [identifier, ...decodedVal] = decodeURIComponent(value).split(':');
+            value = decodedVal.join(':');
+            switch (identifier) {
+                case 'Array':
+                case 'Object':
+                    value = JSON.parse(value);
+                case 'Date':
+                    value = new Date(value);
+                case 'Number':
+                    value = Number(value);
+                case 'Boolean':
+                    value = value === 'true';
+            }
+            return Object.assign(Object.assign({}, cookie), { [key]: value });
+        }, {});
+    }
     static delete(name) {
-    	document.cookie= name+'=null; max-age=0;'
+        document.cookie = name + '=null; max-age=0;';
     }
-
 }
-
-SVZCookie.prototype.valueOf = function(){
-	return this.value
-}
-
-module.exports = SVZCookie
+//# sourceMappingURL=index.js.map
