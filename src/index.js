@@ -1,17 +1,19 @@
 module.exports = class SVZCookie {
-    constructor(name, parameters = {}) {
-        this.value = value;
+    constructor(name, value, parameters = {}) {
+        this.toJSON = () => {
+            return this.value;
+        };
         this.name = name;
         this.pVals = parameters;
+        if (value) {
+            this.value = value;
+        }
     }
-    toJSON = () => {
-        return this.value;
-    };
     valueOf() {
         return this.value;
     }
     get value() {
-        return SVZCookie.get(this.name, true);
+        return SVZCookie.get(this.name);
     }
     get path() {
         return this.parameters.path;
@@ -68,6 +70,10 @@ module.exports = class SVZCookie {
         this.pVals.sameSite = value;
         SVZCookie.set(this.name, this.value, this.parameters);
     }
+    set prefix(value) {
+        this.pVals.prefix = value;
+        SVZCookie.set(this.name, this.value, this.parameters);
+    }
     delete() {
         SVZCookie.delete(this.name);
     }
@@ -113,6 +119,10 @@ module.exports = class SVZCookie {
                             case 'httpOnly':
                                 cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' HttpOnly;' : '';
                                 break;
+                            case 'prefix':
+                                cookieString = `${(parameters === null || parameters === void 0 ? void 0 : parameters[i]) === 'host'
+                                    ? '__Host-'
+                                    : (parameters === null || parameters === void 0 ? void 0 : parameters[i]) === 'secure' ? '__Secure-' : ''}${cookieString}`;
                         }
                     }
                 }
@@ -129,8 +139,18 @@ module.exports = class SVZCookie {
     static getFull(asPlainObject) {
         return document.cookie.split(';').reduce((cookie, val) => {
             let [key, value] = val.split('=');
-            if (asPlainObject) {
-                return new SVZCookie(key.trim());
+            key = key.trim();
+            if (!asPlainObject) {
+                const params = {};
+                if (key.match(/$__Host-/)) {
+                    key = key.substring(7);
+                    params.prefix = "host";
+                }
+                if (key.match(/$__Secure-/)) {
+                    key = key.substring(9);
+                    params.prefix = 'secure';
+                }
+                return new SVZCookie(key, undefined, params);
             }
             const [identifier, ...decodedVal] = decodeURIComponent(value).split(':');
             value = decodedVal.join(':');

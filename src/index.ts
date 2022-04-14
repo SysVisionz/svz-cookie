@@ -1,7 +1,7 @@
 export type CookieParams = {
 	/** the defined date when the cookie will expire */
 	expires?: Date,
-	/** the defined maximum age when the cookie will expire */
+	/** the defined maximum age when the cookie will expire, in minutes */
 	maxAge?: number,
 	/** the path where this cookie is received */
 	path?: string,
@@ -13,22 +13,18 @@ export type CookieParams = {
 	httpOnly?: boolean,
 	/** if your cookie should be restricted to a first-party or same-site context. */
 	sameSite?: 'Strict' | 'Lax' | 'None',
+    /** whether your cookie has the __Host or __Secure prefix */
+    prefix?: 'host' | 'secure'
 }
-export default interface SVZCookie{
-	toJSON: () => any,
-	name: string,
-	prefixes: {
-		host: boolean
-		secure: boolean
-	};
-}
-
-export default class SVZCookie implements SVZCookie{
+export default class SVZCookie{
 	pVals: CookieParams;
-
-	constructor(name: string, parameters: CookieParams = {}){
+	name: string;
+	constructor(name: string, value?: any, parameters: CookieParams = {}){
 		this.name = name;
 		this.pVals = parameters;
+		if (value){
+			this.value = value
+		}
 	}
 
 	toJSON = () => {
@@ -107,6 +103,11 @@ export default class SVZCookie implements SVZCookie{
 		SVZCookie.set(this.name, this.value, this.parameters)
 	}
 
+	set prefix(value: CookieParams["prefix"]){
+		this.pVals.prefix = value;
+		SVZCookie.set(this.name, this.value, this.parameters)
+	}
+
 	delete(){
 		SVZCookie.delete(this.name)
 	}
@@ -152,6 +153,10 @@ export default class SVZCookie implements SVZCookie{
 							case 'httpOnly':
 								cookieString += parameters?.[i] ? ' HttpOnly;' : '';
 								break;
+							case 'prefix':
+								cookieString = `${parameters?.[i] === 'host' 
+									? '__Host-'
+									: parameters?.[i] === 'secure' ? '__Secure-' : ''}${cookieString}`
 						}
 					}
 				}
@@ -171,8 +176,18 @@ export default class SVZCookie implements SVZCookie{
 	static getFull(asPlainObject?: boolean): {[name: string]: any} {
 		return document.cookie.split(';').reduce((cookie: {[name: string]: any}, val: string) => {
 			let [key, value]: any[] = val.split('=')
-			if (asPlainObject){
-				return new SVZCookie(key.trim())
+			key = key.trim()
+			if (!asPlainObject){
+				const params: CookieParams = {}
+				if (key.match(/$__Host-/)){
+					key = key.substring(7)
+					params.prefix = "host"
+				}
+				if (key.match(/$__Secure-/)){
+					key = key.substring(9)
+					params.prefix = 'secure'
+				}
+				return new SVZCookie(key, undefined, params)
 			}
 			const [identifier, ...decodedVal]: string[]= decodeURIComponent( value ).split(':')
 			value = decodedVal.join(':')

@@ -1,7 +1,7 @@
 export type CookieParams = {
 	/** the defined date when the cookie will expire */
 	expires?: Date,
-	/** the defined maximum age when the cookie will expire */
+	/** the defined maximum age when the cookie will expire, in minutes */
 	maxAge?: number,
 	/** the path where this cookie is received */
 	path?: string,
@@ -13,17 +13,12 @@ export type CookieParams = {
 	httpOnly?: boolean,
 	/** if your cookie should be restricted to a first-party or same-site context. */
 	sameSite?: 'Strict' | 'Lax' | 'None',
+    /** whether your cookie has the __Host or __Secure prefix */
+    prefix?: 'host' | 'secure'
 }
-declare interface SVZCookie{
-	toJSON: () => any,
-	name: string,
-	prefixes: {
-		host: boolean
-		secure: boolean
-	};
-}
-declare class SVZCookie implements SVZCookie{
-    constructor(name: string, value: any, parameters: CookieParams)
+declare class SVZCookie{
+    constructor(name: string, value?: any, parameters?: CookieParams)
+    name: string;
     toJSON: () => SVZCookie["value"];
     value: any;
     parameters: CookieParams;
@@ -34,6 +29,7 @@ declare class SVZCookie implements SVZCookie{
     secure: CookieParams["secure"];
     httpOnly: CookieParams["httpOnly"];
     sameSite: CookieParams["sameSite"];
+    prefix: CookieParams["prefix"]
     /** deletes your cookie */
     delete: () => void;
     static get: {
