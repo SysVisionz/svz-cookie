@@ -16,10 +16,10 @@ export type CookieParams = {
     /** whether your cookie has the __Host or __Secure prefix */
     prefix?: 'host' | 'secure'
 }
-export default class SVZCookie{
+export default class SuperCookie<V = any>{
 	pVals: CookieParams;
 	name: string;
-	constructor(name: string, value?: any, parameters: CookieParams = {}){
+	constructor(name: string, value?: V, parameters: CookieParams = {}){
 		this.name = name;
 		this.pVals = parameters;
 		if (value){
@@ -36,7 +36,7 @@ export default class SVZCookie{
 	}
 
 	get value(){
-		return SVZCookie.get(this.name)
+		return SuperCookie.get(this.name, true)
 	}
 
 	get path(){
@@ -67,27 +67,27 @@ export default class SVZCookie{
 	}
 
 	set value (value) {
-		SVZCookie.set(this.name, value, this.parameters);
+		SuperCookie.set(this.name, value, this.parameters);
 	}
 
 	set expires(value){
 		this.parameters.expires = value;;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set path(value){
 		this.parameters.path = value;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set domain(value){
 		this.parameters.domain = value;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set maxAge(value){
 		this.parameters.maxAge = value;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set parameters(parameters: CookieParams){
@@ -95,37 +95,47 @@ export default class SVZCookie{
 			parameters.maxAge
 		}
 		this.pVals = parameters;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set sameSite(value){
 		this.pVals.sameSite = value;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set prefix(value: CookieParams["prefix"]){
 		this.pVals.prefix = value;
-		SVZCookie.set(this.name, this.value, this.parameters)
+		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	delete(){
-		SVZCookie.delete(this.name)
+		SuperCookie.delete(this.name)
 	}
 
 	static set (name: string, value: any, parameters: CookieParams) {
 		if (name && value){
-			switch(value.constructor.name){
-				case 'Object':
-				case 'Array':
-					value = `JSON:${JSON.stringify(value)}`
-				case 'Date':
-					value = `${value.constructor.name}:${value.toJSON()}`
-				case 'Number':
-				case 'Boolean':
-					value = `${value.constructor.name}:${value}`
-				default: 
-					value = typeof value === "object" ? `JSON:${JSON.stringify(value)}` : `String:${value}`
+			const typeObject = (value: any, topLevel?: boolean): string => {
+                if (value === null){
+                    return 'null:null'
+                }
+                switch (value.constructor.name) {
+                    case 'Date':
+                        return `${value.constructor.name}:${value.toJSON()}`;
+                    case 'Symbol':
+                        return `${value.constructor.name}:${value.toString().substring(7, value.toString().length - 1)}`
+                    case 'Boolean':
+                    case 'BigInt':
+                        return `${value.constructor.name}:${value}`;
+                    default:
+                        return typeof value === 'object'
+						? topLevel ? `${value.constructor.name}:${JSON.stringify(typeObject(value))}` : 
+						value instanceof Array 
+							? value.map((v) => typeObject(v))
+							: Object.entries(value).reduce((value: {[key: string]: any}, entry: [string, any]) => ({...value, [entry[0]]: typeObject(entry[1])}), {})
+					: value;
+				}
 			}
+			value = typeObject(value, true)
 			let cookieString = name + '=' + encodeURIComponent(value) + ';';
 			if (parameters){
 				for (const i in parameters){
@@ -172,10 +182,10 @@ export default class SVZCookie{
 		return this.getFull(asPlainObject)[name]
 	}
 
-	//** Retrieves all cookie elements for this document's cookies as an array of SVZCookies */
+	//** Retrieves all cookie elements for this document's cookies as an array of SuperCookies */
 	static getFull(asPlainObject?: boolean): {[name: string]: any} {
 		return document.cookie.split(';').reduce((cookie: {[name: string]: any}, val: string) => {
-			let [key, value]: any[] = val.split('=')
+			let [key, valueOf]: string[] = val.split('=')
 			key = key.trim()
 			if (!asPlainObject){
 				const params: CookieParams = {}
@@ -187,22 +197,42 @@ export default class SVZCookie{
 					key = key.substring(9)
 					params.prefix = 'secure'
 				}
-				return new SVZCookie(key, undefined, params)
+				return {...cookie, [key]: new SuperCookie(key, undefined, params)}
 			}
-			const [identifier, ...decodedVal]: string[]= decodeURIComponent( value ).split(':')
-			value = decodedVal.join(':')
-			switch(identifier){
-				case 'Array':
-				case 'Object':
-					value = JSON.parse(value)
-				case 'Date':
-					value = new Date(value)
-				case 'Number':
-					value = Number(value)
-				case 'Boolean':
-					value = value === 'true'
+			val = decodeURIComponent(valueOf)
+			const untype = (value: any): any => {
+				if (value instanceof Array){
+					return value.map(value => untype(value))
+				}
+				if (value instanceof Object){
+					return Object.entries(value).reduce((val: {[key: string]: any}, entry: [string, any]) => ({...val, [entry[0]]: untype(entry[1])}), {})
+				}
+				if (typeof value === 'number' || (Number(value) == value && String(Number(value)) === value)){
+					return Number(value)
+				}
+				if (typeof value === 'string' && !value.includes(":")){
+					return value
+				}
+				const [identifier, ...decodedVal]: string[]=value.split(':')
+				value = decodedVal.join(':')
+				// @ts-ignore
+				switch (identifier) {
+					case 'Array':
+					case 'Object':
+						return untype(JSON.parse(value))
+					case 'Date':
+						return new Date(value);
+					case 'Boolean':
+						return value === 'true';
+					case 'BigInt':
+						return BigInt(value);
+					case 'Symbol':
+						return Symbol(value);
+					default:
+						return value;
+				}
 			}
-			return {...cookie, [key]: value}
+			return {...cookie, [key]: untype(val)}
 		}, {})
     }
 

@@ -1,35 +1,35 @@
-# SVZCookie
+# SuperCookie
 
-This module provides four management classes for manipulating Numbers, Objects, Cookies, and Dates in ways with multiple use cases I've employed on a number of occasions.
+This module provides four management classes for saving and retrieving objects, arrays, and all current javascript primitives into a named cookie without issue.
 
 ## Installation
 To install, in terminal type
 
 ```
-	npm i --save svz-cookie
+	npm i --save supercookie
 ```
 
 then, in your project,
 
 ```
-import SVZCookie from 'svz-cookie';
+import SuperCookie from 'supercookie';
 ```  
 
 ## Constructor
 
-new SVZCookie(name)
+new SuperCookie(name)
 
 ## Class Variables
 
 * **name**  
 type: ***String***  
-The cookie being utilized by SVZCookie.
+The cookie being utilized by SuperCookie.
 
 * **value**  
 type:***String***  
 Retrieves or sets the value for the cookie of the given **name** value.
 
-**NOTE:** The following values cannot retrieve the current parameters of a cookie. They are defined within the SVZCookie, and modify the cookie accordingly, but until they are set these values are **undefined**.
+**NOTE:** The following values cannot retrieve the current parameters of a cookie. They are defined within the SuperCookie, and modify the cookie accordingly, but until they are set these values are **undefined**.
 
 * **path**  
 type: ***String***  
@@ -78,17 +78,8 @@ Deletes the cookie of the given **name**
 
 * **getFull()**  
 type: ***Object***
-Gets all cookies currently available as individual SVZCookies
+Gets all cookies currently available as individual SuperCookies
 
 ## Version History
 
-1.0  
-Initial release.
-
-1.1
--Refactor, and addition of cookie as the valueOf.  
--JSON.parse and toJSON will now return the JSON as object contents of the cookie, rather than the cookie object itself.  
--getFull now returns all cookies as SVZCookies.  
-
-2.0  
--Now with typescript!
+3.0 The rework for typescript and cookies building properly, complete with retyping for primitive object types, is good to go!

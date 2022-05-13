@@ -1,4 +1,4 @@
-module.exports = class SVZCookie {
+module.exports = class SuperCookie {
     constructor(name, value, parameters = {}) {
         this.toJSON = () => {
             return this.value;
@@ -13,7 +13,7 @@ module.exports = class SVZCookie {
         return this.value;
     }
     get value() {
-        return SVZCookie.get(this.name);
+        return SuperCookie.get(this.name, true);
     }
     get path() {
         return this.parameters.path;
@@ -40,58 +40,68 @@ module.exports = class SVZCookie {
         return this.pVals;
     }
     set value(value) {
-        SVZCookie.set(this.name, value, this.parameters);
+        SuperCookie.set(this.name, value, this.parameters);
     }
     set expires(value) {
         this.parameters.expires = value;
         ;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set path(value) {
         this.parameters.path = value;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set domain(value) {
         this.parameters.domain = value;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set maxAge(value) {
         this.parameters.maxAge = value;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set parameters(parameters) {
         if (parameters.maxAge) {
             parameters.maxAge;
         }
         this.pVals = parameters;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set sameSite(value) {
         this.pVals.sameSite = value;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     set prefix(value) {
         this.pVals.prefix = value;
-        SVZCookie.set(this.name, this.value, this.parameters);
+        SuperCookie.set(this.name, this.value, this.parameters);
     }
     delete() {
-        SVZCookie.delete(this.name);
+        SuperCookie.delete(this.name);
     }
     static set(name, value, parameters) {
         var _a;
         if (name && value) {
-            switch (value.constructor.name) {
-                case 'Object':
-                case 'Array':
-                    value = `JSON:${JSON.stringify(value)}`;
-                case 'Date':
-                    value = `${value.constructor.name}:${value.toJSON()}`;
-                case 'Number':
-                case 'Boolean':
-                    value = `${value.constructor.name}:${value}`;
-                default:
-                    value = typeof value === "object" ? `JSON:${JSON.stringify(value)}` : `String:${value}`;
-            }
+            const typeObject = (value, topLevel) => {
+                if (value === null) {
+                    return 'null:null';
+                }
+                switch (value.constructor.name) {
+                    case 'Date':
+                        return `${value.constructor.name}:${value.toJSON()}`;
+                    case 'Symbol':
+                        return `${value.constructor.name}:${value.toString().substring(7, value.toString().length - 1)}`;
+                    case 'Boolean':
+                    case 'BigInt':
+                        return `${value.constructor.name}:${value}`;
+                    default:
+                        return typeof value === 'object'
+                            ? topLevel ? `${value.constructor.name}:${JSON.stringify(typeObject(value))}` :
+                                value instanceof Array
+                                    ? value.map((v) => typeObject(v))
+                                    : Object.entries(value).reduce((value, entry) => (Object.assign(Object.assign({}, value), { [entry[0]]: typeObject(entry[1]) })), {})
+                            : value;
+                }
+            };
+            value = typeObject(value, true);
             let cookieString = name + '=' + encodeURIComponent(value) + ';';
             if (parameters) {
                 for (const i in parameters) {
@@ -138,7 +148,7 @@ module.exports = class SVZCookie {
     }
     static getFull(asPlainObject) {
         return document.cookie.split(';').reduce((cookie, val) => {
-            let [key, value] = val.split('=');
+            let [key, valueOf] = val.split('=');
             key = key.trim();
             if (!asPlainObject) {
                 const params = {};
@@ -150,22 +160,41 @@ module.exports = class SVZCookie {
                     key = key.substring(9);
                     params.prefix = 'secure';
                 }
-                return new SVZCookie(key, undefined, params);
+                return Object.assign(Object.assign({}, cookie), { [key]: new SuperCookie(key, undefined, params) });
             }
-            const [identifier, ...decodedVal] = decodeURIComponent(value).split(':');
-            value = decodedVal.join(':');
-            switch (identifier) {
-                case 'Array':
-                case 'Object':
-                    value = JSON.parse(value);
-                case 'Date':
-                    value = new Date(value);
-                case 'Number':
-                    value = Number(value);
-                case 'Boolean':
-                    value = value === 'true';
-            }
-            return Object.assign(Object.assign({}, cookie), { [key]: value });
+            val = decodeURIComponent(valueOf);
+            const untype = (value) => {
+                if (value instanceof Array) {
+                    return value.map(value => untype(value));
+                }
+                if (value instanceof Object) {
+                    return Object.entries(value).reduce((val, entry) => (Object.assign(Object.assign({}, val), { [entry[0]]: untype(entry[1]) })), {});
+                }
+                if (typeof value === 'number' || (Number(value) == value && String(Number(value)) === value)) {
+                    return Number(value);
+                }
+                if (typeof value === 'string' && !value.includes(":")) {
+                    return value;
+                }
+                const [identifier, ...decodedVal] = value.split(':');
+                value = decodedVal.join(':');
+                switch (identifier) {
+                    case 'Array':
+                    case 'Object':
+                        return untype(JSON.parse(value));
+                    case 'Date':
+                        return new Date(value);
+                    case 'Boolean':
+                        return value === 'true';
+                    case 'BigInt':
+                        return BigInt(value);
+                    case 'Symbol':
+                        return Symbol(value);
+                    default:
+                        return value;
+                }
+            };
+            return Object.assign(Object.assign({}, cookie), { [key]: untype(val) });
         }, {});
     }
     static delete(name) {

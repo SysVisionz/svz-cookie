@@ -16,11 +16,11 @@ export type CookieParams = {
     /** whether your cookie has the __Host or __Secure prefix */
     prefix?: 'host' | 'secure'
 }
-declare class SVZCookie{
+declare class SuperCookie<V = any>{
     constructor(name: string, value?: any, parameters?: CookieParams)
     name: string;
-    toJSON: () => SVZCookie["value"];
-    value: any;
+    toJSON: () => SuperCookie["value"];
+    value: V;
     parameters: CookieParams;
     expires: CookieParams["expires"];
     path: CookieParams["path"];
@@ -33,15 +33,15 @@ declare class SVZCookie{
     /** deletes your cookie */
     delete: () => void;
     static get: {
-        (name: string, asPlainObject?: false | undefined): SVZCookie 
+        (name: string, asPlainObject?: false | undefined): SuperCookie 
         (name: string, asPlainObject?: true): any;
     }
     static set: (name: string, value: any, parameters: CookieParams) => void;
     static getFull: {
-        (asPlainObject?: false | undefined): {[name: string]: SVZCookie}
+        (asPlainObject?: false | undefined): {[name: string]: SuperCookie}
         (asPlainObject?: true): {[name: string]: any}
     }
     static delete: (name: string) => void;
 }
 
-export default SVZCookie
+export default SuperCookie
