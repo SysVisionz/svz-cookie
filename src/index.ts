@@ -125,8 +125,11 @@ export default class SuperCookie<V = any>{
 	}
 
 	static set (name: string, value: any, parameters: CookieParams) {
-		if (name && value !== undefined){
+		if (name){
 			const typeObject = (value: any, topLevel?: boolean): string => {
+				if (value === undefined){
+					return 'undefined:undefined'
+				}
                 if (value === null){
                     return 'null:null'
                 }
@@ -224,6 +227,12 @@ export default class SuperCookie<V = any>{
 				}
 				if (typeof value === 'string' && !value.includes(":")){
 					return value
+				}
+				if (typeof value === 'string' && value === 'null:null'){
+					return null;
+				}
+				if (typeof value === 'string' && value === 'undefined:undefined'){
+					return undefined;
 				}
 				const [identifier, ...decodedVal]: string[]=value.split(':')
 				value = decodedVal.join(':')
