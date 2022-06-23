@@ -9,6 +9,6 @@
       "sourceMap": true,
       "lib": ["es2020", "DOM"]
     },
-    "include": ["src/**/*.ts"],
+    "include": ["src/*.ts", "src/types/index.d.ts"],
     "exclude": ["node_modules"]
 }

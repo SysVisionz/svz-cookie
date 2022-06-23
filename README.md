@@ -82,4 +82,6 @@ Gets all cookies currently available as individual SuperCookies
 
 ## Version History
 
-3.0 The rework for typescript and cookies building properly, complete with retyping for primitive object types, is good to go!
+3.0 - The rework for typescript and cookies building properly, complete with retyping for primitive object types, is good to go!  
+
+3.1 - Remodeled the constructor to not include value, as that is typically defined through usage and many times would require putting an undefined entry in the middle.

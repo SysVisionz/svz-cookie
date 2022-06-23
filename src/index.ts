@@ -19,12 +19,24 @@ export type CookieParams = {
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;
 	name: string;
-	constructor(name: string, value?: V, parameters: CookieParams = {}){
+	constructor(name: string, parameters: CookieParams = {}){
 		this.name = name;
-		this.pVals = parameters;
-		if (value){
-			this.value = value
-		}
+		// const {cookieStore} = window;
+		// if (cookieStore){
+        //     cookieStore.getAll({name}).then(cookiesList => {
+		// 		cookiesList.find(cookie => {
+		// 			if (!parameters){
+		// 				return true;
+		// 			}
+		// 			for (const i in parameters){
+						
+		// 			}
+		// 		})
+		// 	})
+        // }
+        // else {
+            this.pVals = parameters;
+        // }
 	}
 
 	toJSON = () => {
@@ -109,11 +121,11 @@ export default class SuperCookie<V = any>{
 	}
 
 	delete(){
-		SuperCookie.delete(this.name)
+		SuperCookie.delete(this.name, this.path)
 	}
 
 	static set (name: string, value: any, parameters: CookieParams) {
-		if (name && value){
+		if (name && value !== undefined){
 			const typeObject = (value: any, topLevel?: boolean): string => {
                 if (value === null){
                     return 'null:null'
@@ -146,7 +158,7 @@ export default class SuperCookie<V = any>{
 								cookieString += ' expires=' + date.toUTCString() + ';';
 								break;
 							case 'path':
-								cookieString += parameters?.path?.charAt(0) === '/' ? parameters?.path : ' /' + parameters?.path + ';';
+								cookieString += 'path=' + parameters?.path + ';';
 								break;
 							case 'secure':
 								cookieString += parameters?.[i] ? ' secure;': "";
@@ -197,7 +209,7 @@ export default class SuperCookie<V = any>{
 					key = key.substring(9)
 					params.prefix = 'secure'
 				}
-				return {...cookie, [key]: new SuperCookie(key, undefined, params)}
+				return {...cookie, [key]: new SuperCookie(key, params)}
 			}
 			val = decodeURIComponent(valueOf)
 			const untype = (value: any): any => {
@@ -236,8 +248,8 @@ export default class SuperCookie<V = any>{
 		}, {})
     }
 
-    static delete(name: string) {
-    	document.cookie= name+'=null; max-age=0;'
+    static delete(name: string, path?: string) {
+    	document.cookie=`${name}=null; max-age=0; ${path ? `path=${path}` : ''}`
     }
 
 }

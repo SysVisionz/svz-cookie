@@ -1,13 +1,10 @@
 module.exports = class SuperCookie {
-    constructor(name, value, parameters = {}) {
+    constructor(name, parameters = {}) {
         this.toJSON = () => {
             return this.value;
         };
         this.name = name;
         this.pVals = parameters;
-        if (value) {
-            this.value = value;
-        }
     }
     valueOf() {
         return this.value;
@@ -75,11 +72,10 @@ module.exports = class SuperCookie {
         SuperCookie.set(this.name, this.value, this.parameters);
     }
     delete() {
-        SuperCookie.delete(this.name);
+        SuperCookie.delete(this.name, this.path);
     }
     static set(name, value, parameters) {
-        var _a;
-        if (name && value) {
+        if (name && value !== undefined) {
             const typeObject = (value, topLevel) => {
                 if (value === null) {
                     return 'null:null';
@@ -112,7 +108,7 @@ module.exports = class SuperCookie {
                                 cookieString += ' expires=' + date.toUTCString() + ';';
                                 break;
                             case 'path':
-                                cookieString += ((_a = parameters === null || parameters === void 0 ? void 0 : parameters.path) === null || _a === void 0 ? void 0 : _a.charAt(0)) === '/' ? parameters === null || parameters === void 0 ? void 0 : parameters.path : ' /' + (parameters === null || parameters === void 0 ? void 0 : parameters.path) + ';';
+                                cookieString += 'path=' + (parameters === null || parameters === void 0 ? void 0 : parameters.path) + ';';
                                 break;
                             case 'secure':
                                 cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' secure;' : "";
@@ -160,7 +156,7 @@ module.exports = class SuperCookie {
                     key = key.substring(9);
                     params.prefix = 'secure';
                 }
-                return Object.assign(Object.assign({}, cookie), { [key]: new SuperCookie(key, undefined, params) });
+                return Object.assign(Object.assign({}, cookie), { [key]: new SuperCookie(key, params) });
             }
             val = decodeURIComponent(valueOf);
             const untype = (value) => {
@@ -197,8 +193,8 @@ module.exports = class SuperCookie {
             return Object.assign(Object.assign({}, cookie), { [key]: untype(val) });
         }, {});
     }
-    static delete(name) {
-        document.cookie = name + '=null; max-age=0;';
+    static delete(name, path) {
+        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path}` : ''}`;
     }
 }
 //# sourceMappingURL=index.js.map

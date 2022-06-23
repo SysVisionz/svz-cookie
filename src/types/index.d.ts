@@ -17,7 +17,7 @@ export type CookieParams = {
     prefix?: 'host' | 'secure'
 }
 declare class SuperCookie<V = any>{
-    constructor(name: string, value?: any, parameters?: CookieParams)
+    constructor(name: string, parameters?: CookieParams)
     name: string;
     toJSON: () => SuperCookie["value"];
     value: V;
@@ -41,7 +41,29 @@ declare class SuperCookie<V = any>{
         (asPlainObject?: false | undefined): {[name: string]: SuperCookie}
         (asPlainObject?: true): {[name: string]: any}
     }
-    static delete: (name: string) => void;
+    static delete: (name: string, path?: string) => void;
+}
+
+declare global {
+    interface Window {
+        cookieStore?: {
+            delete(name: string): Promise<undefined>;
+            delete({name, url, path}:{name: string, url: string, path: string}): Promise<undefined>;
+            get(name: string): Promise<{name: string, value: string, domain: string, path: string, expires: number, secure: boolean, sameSite: 'lax' | 'strict' | 'none'}>;
+            get({name, url}: {name: string, url: string}): Promise<{name: string, value: string, domain: string, path: string, expires: number, secure: boolean, sameSite: 'lax' | 'strict' | 'none'}>;
+            getAll(name?: string): Promise<{name: string, value: string, domain: string, path: string, expires: number, secure: boolean, sameSite: 'lax' | 'strict' | 'none'}[]>
+            getAll({name, url}?: {name?: string, url?: string}): Promise<{name: string, value: string, domain: string, path: string, expires: number, secure: boolean, sameSite: 'lax' | 'strict' | 'none'}[]>
+            set(name: string, value: string): Promise<undefined>;
+            set({name, value, expires, domain, path, sameSite}: {
+                name: string,
+                value: string,
+                expires?: number,
+                domain?: string,
+                path?: string,
+                sameSite?: 'strict' | 'lax' | 'none'
+            }): Promise<undefined>
+        }
+    }
 }
 
 export default SuperCookie
