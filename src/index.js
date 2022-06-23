@@ -75,8 +75,11 @@ module.exports = class SuperCookie {
         SuperCookie.delete(this.name, this.path);
     }
     static set(name, value, parameters) {
-        if (name && value !== undefined) {
+        if (name) {
             const typeObject = (value, topLevel) => {
+                if (value === undefined) {
+                    return 'undefined:undefined';
+                }
                 if (value === null) {
                     return 'null:null';
                 }
@@ -171,6 +174,12 @@ module.exports = class SuperCookie {
                 }
                 if (typeof value === 'string' && !value.includes(":")) {
                     return value;
+                }
+                if (typeof value === 'string' && value === 'null:null') {
+                    return null;
+                }
+                if (typeof value === 'string' && value === 'undefined:undefined') {
+                    return undefined;
                 }
                 const [identifier, ...decodedVal] = value.split(':');
                 value = decodedVal.join(':');
