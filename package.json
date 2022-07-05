@@ -1,13 +1,9 @@
 {
-  "name": "temp-mocks",
-  "version": "0.1.0",
-  "description": "A utility for generating an object from JSON directory organizations",
+  "name": "supercookie",
+  "version": "3.2.2",
+  "description": "A tool for managing and creating the most versatile cookies ever seen without all the fuss.",
   "keywords": [
-    "testing",
-    "mocks",
-    "mockups",
-    "object",
-    "JSON",
+    "cookie",
     "sysvisionz",
     "utilities",
     "management"
@@ -20,14 +16,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SysVisionz/"
+    "url": "git+https://github.com/SysVisionz/svz-managers.git"
   },
   "author": "Colin Brennan",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/SysVisionz/temp-mocks/issues"
+    "url": "https://github.com/SysVisionz/svz-managers/issues"
   },
-  "homepage": "https://github.com/SysVisionz/temp-mocks#readme",
+  "homepage": "https://github.com/SysVisionz/svz-managers#readme",
   "devDependencies": {
     "@babel/core": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",

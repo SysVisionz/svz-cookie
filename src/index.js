@@ -1,88 +1,209 @@
-import * as fs from "fs";
-export class TempMocks {
-    constructor(path, parent) {
-        this.__buildStore = (p) => new Promise((res, rej) => {
-            var _a, _b;
-            const parentPath = (_b = (_a = this.parent) === null || _a === void 0 ? void 0 : _a.path) !== null && _b !== void 0 ? _b : __dirname;
-            const buildFiles = (files) => new Promise((res, rej) => {
-                if (files.length) {
-                    res({});
-                }
-                else {
-                    const fileName = files.pop();
-                    fs.stat(`${parentPath}/${fileName}`, (err, stats) => {
-                        if (err) {
-                            rej(err);
-                        }
-                        else {
-                            if (stats.isDirectory) {
-                                res(new TempMocks(fileName, this.root || this));
-                            }
-                            else {
-                                if (fileName.match(/.json$/i)) {
-                                    const name = fileName.substring(0, fileName.match(/.json$/i).index);
-                                    this.store[fileName] = {};
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-            fs.readdir(p, (err, files) => {
-                buildFiles(files);
-            });
-        });
-        this.__readFile = (p, obj) => {
-            return new Promise((res, rej) => {
-                fs.readFile(p, 'utf8', (err, data) => {
-                    if (err) {
-                        rej(err);
-                    }
-                    else {
-                        this.set(p, JSON.parse(data));
-                        res(JSON.parse(data));
-                    }
-                });
-            });
+module.exports = class SuperCookie {
+    constructor(name, parameters = {}) {
+        this.toJSON = () => {
+            return this.value;
         };
-        this.set = (path, object) => {
-            const p = path.split('/');
-            const target = p.pop();
-            const toEdit = this.at(p)[target] = object;
-        };
-        this.at = subPath => {
-            var _a;
-            subPath = typeof subPath === 'string' ? subPath.split('/') : subPath;
-            if (!subPath.length) {
-                return this;
-            }
-            const next = this.store[subPath.shift()];
-            return (_a = next === null || next === void 0 ? void 0 : next.at(subPath)) !== null && _a !== void 0 ? _a : next;
-        };
-        this.toJSON = () => this.asObject;
-        this.path = path;
-        this.parent = parent;
+        this.name = name;
+        this.pVals = parameters;
     }
-    set path(val) {
-        this.__pathValue = val;
-        this.__buildStore(val).then((store) => this.store = store);
+    valueOf() {
+        return this.value;
+    }
+    get value() {
+        return SuperCookie.get(this.name, true);
     }
     get path() {
-        var _a, _b;
-        return `${(_b = (_a = this.parent) === null || _a === void 0 ? void 0 : _a.path) !== null && _b !== void 0 ? _b : __dirname}/${this.__pathValue}`;
+        return this.parameters.path;
     }
-    get root() { return globalThis.TempMocks; }
-    get asObject() {
-        return Object.keys(this.store).reduce((curr, key) => {
-            var _a;
-            const val = this.store[key];
-            return Object.assign(Object.assign({}, curr), { [key]: ((_a = val === null || val === void 0 ? void 0 : val.constructor) === null || _a === void 0 ? void 0 : _a.name) === 'TempMocks' ? val.asObject : val });
+    get domain() {
+        return this.parameters.domain;
+    }
+    get expires() {
+        return this.parameters.expires;
+    }
+    get secure() {
+        return this.parameters.secure;
+    }
+    get maxAge() {
+        return this.parameters.maxAge;
+    }
+    get sameSite() {
+        return this.parameters.sameSite;
+    }
+    get httpOnly() {
+        return this.parameters.httpOnly;
+    }
+    get parameters() {
+        return this.pVals;
+    }
+    set value(value) {
+        SuperCookie.set(this.name, value, this.parameters);
+    }
+    set expires(value) {
+        this.parameters.expires = value;
+        ;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set path(value) {
+        this.parameters.path = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set domain(value) {
+        this.parameters.domain = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set maxAge(value) {
+        this.parameters.maxAge = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set parameters(parameters) {
+        if (parameters.maxAge) {
+            parameters.maxAge;
+        }
+        this.pVals = parameters;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set sameSite(value) {
+        this.pVals.sameSite = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set prefix(value) {
+        this.pVals.prefix = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    delete() {
+        SuperCookie.delete(this.name, this.path);
+    }
+    static set(name, value, parameters) {
+        if (name) {
+            const typeObject = (value, topLevel) => {
+                if (value === undefined) {
+                    return 'undefined:undefined';
+                }
+                if (value === null) {
+                    return 'null:null';
+                }
+                switch (value.constructor.name) {
+                    case 'Date':
+                        return `${value.constructor.name}:${value.toJSON()}`;
+                    case 'Symbol':
+                        return `${value.constructor.name}:${value.toString().substring(7, value.toString().length - 1)}`;
+                    case 'Boolean':
+                    case 'BigInt':
+                        return `${value.constructor.name}:${value}`;
+                    default:
+                        return typeof value === 'object'
+                            ? topLevel ? `${value.constructor.name}:${JSON.stringify(typeObject(value))}` :
+                                value instanceof Array
+                                    ? value.map((v) => typeObject(v))
+                                    : Object.entries(value).reduce((value, entry) => (Object.assign(Object.assign({}, value), { [entry[0]]: typeObject(entry[1]) })), {})
+                            : value;
+                }
+            };
+            value = typeObject(value, true);
+            let cookieString = name + '=' + encodeURIComponent(value) + ';';
+            if (parameters) {
+                for (const i in parameters) {
+                    if (parameters[i]) {
+                        switch (i) {
+                            case 'expires':
+                                const date = typeof (parameters === null || parameters === void 0 ? void 0 : parameters.expires) === 'object' ? parameters === null || parameters === void 0 ? void 0 : parameters.expires : new Date(parameters === null || parameters === void 0 ? void 0 : parameters.expires);
+                                cookieString += ' expires=' + date.toUTCString() + ';';
+                                break;
+                            case 'path':
+                                cookieString += 'path=' + (parameters === null || parameters === void 0 ? void 0 : parameters.path) + ';';
+                                break;
+                            case 'secure':
+                                cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' secure;' : "";
+                                break;
+                            case 'sameSite':
+                                cookieString += ' samesite=' + (parameters === null || parameters === void 0 ? void 0 : parameters.sameSite) + ';';
+                                break;
+                            case 'maxAge':
+                                cookieString += ' max-age=' + (parameters === null || parameters === void 0 ? void 0 : parameters.maxAge) + ';';
+                                break;
+                            case 'domain':
+                                cookieString += ' domain=' + (parameters === null || parameters === void 0 ? void 0 : parameters.domain) + ';';
+                                break;
+                            case 'httpOnly':
+                                cookieString += (parameters === null || parameters === void 0 ? void 0 : parameters[i]) ? ' HttpOnly;' : '';
+                                break;
+                            case 'prefix':
+                                cookieString = `${(parameters === null || parameters === void 0 ? void 0 : parameters[i]) === 'host'
+                                    ? '__Host-'
+                                    : (parameters === null || parameters === void 0 ? void 0 : parameters[i]) === 'secure' ? '__Secure-' : ''}${cookieString}`;
+                        }
+                    }
+                }
+            }
+            document.cookie = cookieString;
+        }
+        else {
+            throw 'TypeError: Requires (name, value, [parameters]) arguments';
+        }
+    }
+    static get(name, asPlainObject) {
+        return this.getFull(asPlainObject)[name];
+    }
+    static getFull(asPlainObject) {
+        return document.cookie.split(';').reduce((cookie, val) => {
+            let [key, valueOf] = val.split('=');
+            key = key.trim();
+            if (!asPlainObject) {
+                const params = {};
+                if (key.match(/$__Host-/)) {
+                    key = key.substring(7);
+                    params.prefix = "host";
+                }
+                if (key.match(/$__Secure-/)) {
+                    key = key.substring(9);
+                    params.prefix = 'secure';
+                }
+                return Object.assign(Object.assign({}, cookie), { [key]: new SuperCookie(key, params) });
+            }
+            val = decodeURIComponent(valueOf);
+            const untype = (value) => {
+                if (value instanceof Array) {
+                    return value.map(value => untype(value));
+                }
+                if (value instanceof Object) {
+                    return Object.entries(value).reduce((val, entry) => (Object.assign(Object.assign({}, val), { [entry[0]]: untype(entry[1]) })), {});
+                }
+                if (typeof value === 'number' || (Number(value) == value && String(Number(value)) === value)) {
+                    return Number(value);
+                }
+                if (typeof value === 'string' && !value.includes(":")) {
+                    return value;
+                }
+                if (typeof value === 'string' && value === 'null:null') {
+                    return null;
+                }
+                if (typeof value === 'string' && value === 'undefined:undefined') {
+                    return undefined;
+                }
+                const [identifier, ...decodedVal] = value.split(':');
+                value = decodedVal.join(':');
+                switch (identifier) {
+                    case 'Array':
+                    case 'Object':
+                        return untype(JSON.parse(value));
+                    case 'Date':
+                        return new Date(value);
+                    case 'Boolean':
+                        return value === 'true';
+                    case 'BigInt':
+                        return BigInt(value);
+                    case 'Symbol':
+                        return Symbol(value);
+                    default:
+                        return value;
+                }
+            };
+            return Object.assign(Object.assign({}, cookie), { [key]: untype(val) });
         }, {});
     }
+    static delete(name, path) {
+        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path}` : ''}`;
+    }
 }
-
-const buildGlobal = (path) => {
-    globalThis.TempMocks = new TempMocks(path)
-}
-module.exports = buildGlobal, {TempMocks};
 //# sourceMappingURL=index.js.map
