@@ -1,29 +1,29 @@
-# SuperCookie
+# TempMocks
 
-This module provides four management classes for saving and retrieving objects, arrays, and all current javascript primitives into a named cookie without issue.
+This module allows you to build a temporary object emulating how a normal server works with your mock data, complete with limited caching behaviors.
 
 ## Installation
 To install, in terminal type
 
 ```
-	npm i --save supercookie
+	npm i --save-dev temp-mocks
 ```
 
 then, in your project,
 
 ```
-import SuperCookie from 'supercookie';
+import TempMocks from 'temp-mocks';
 ```  
 
 ## Constructor
 
-new SuperCookie(name)
+TempMocks(path)
 
 ## Class Variables
 
-* **name**  
+* **path**  
 type: ***String***  
-The cookie being utilized by SuperCookie.
+The directory path to the current mock data.
 
 * **value**  
 type:***String***  
