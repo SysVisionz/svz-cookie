@@ -121,7 +121,7 @@ export default class SuperCookie<V = any>{
 	}
 
 	delete(){
-		SuperCookie.delete(this.name, this.path)
+		SuperCookie.delete(this.name, {path: this.path, domain: this.domain})
 	}
 
 	static set (name: string, value: any, parameters: CookieParams) {
@@ -257,8 +257,14 @@ export default class SuperCookie<V = any>{
 		}, {})
     }
 
-    static delete(name: string, path?: string) {
-    	document.cookie=`${name}=null; max-age=0; ${path ? `path=${path}` : ''}`
+    static delete(name: string, pathAndDomain: {path?: string, domain?: string}): void;
+	static delete(name: string, path?: string): void
+	static delete(name: string, pathOrPathAndDomain?: string | {path?: string, domain?: string}) {
+		if (typeof pathOrPathAndDomain === 'string'){
+			pathOrPathAndDomain = {path: pathOrPathAndDomain}
+		}
+		const {path, domain} = pathOrPathAndDomain || {}
+		document.cookie=`${name}=null; max-age=0; ${path ? `path=${path};` : ''}${domain ? `domain=${domain};` : ''}`
     }
 
 }

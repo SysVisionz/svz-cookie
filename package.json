@@ -1,6 +1,6 @@
 {
   "name": "supercookie",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "description": "A tool for managing and creating the most versatile cookies ever seen without all the fuss.",
   "keywords": [
     "cookie",
@@ -16,14 +16,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SysVisionz/svz-managers.git"
+    "url": "git+https://github.com/SysVisionz/svz-date.git"
   },
   "author": "Colin Brennan",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/SysVisionz/svz-managers/issues"
+    "url": "https://github.com/SysVisionz/svz-date/issues"
   },
-  "homepage": "https://github.com/SysVisionz/svz-managers#readme",
+  "homepage": "https://github.com/SysVisionz/svz-date#readme",
   "devDependencies": {
     "@babel/core": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",

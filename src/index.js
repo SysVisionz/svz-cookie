@@ -203,7 +203,7 @@ module.exports = class SuperCookie {
         }, {});
     }
     static delete(name, path) {
-        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path}` : ''}`;
+        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path};` : ''}${domain ? ` domain=${domain}` : ''}`;
     }
 }
 //# sourceMappingURL=index.js.map
