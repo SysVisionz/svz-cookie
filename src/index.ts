@@ -82,7 +82,7 @@ export type CookieParams = {
     prefix?: 'host' | 'secure'
 }
 
-const cookieStore = window?.cookieStore as CookieStore;
+const cookieStore = (window || {}).cookieStore as CookieStore;
 
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;
@@ -364,29 +364,39 @@ export default class SuperCookie<V = any>{
 	refresh = new Proxy<CookieRefreshOptions>((() => {}) as unknown as CookieRefreshOptions, {
 		apply: (t, [toRefresh]: [CookieStoreKeys[]]) => {
 			return new Promise<CookieStoreGetOptions>((resolve) => {
-				cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
-					if (!toRefresh.length ){
-						this.name = cookie.name;
-						this.domain = cookie.domain;
-						this.expires = cookie.expires;
-						this.path = cookie.path;
-						this.sameSite = cookie.sameSite;
-						this.secure = cookie.secure;
-						this.value = cookie.value;
-					}
-					toRefresh.forEach((key) => {
-						this.__fromGet([key, cookie[key]])
+				if (cookieStore){
+					cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+						if (!toRefresh.length ){
+							this.name = cookie.name;
+							this.domain = cookie.domain;
+							this.expires = cookie.expires;
+							this.path = cookie.path;
+							this.sameSite = cookie.sameSite;
+							this.secure = cookie.secure;
+							this.value = cookie.value;
+						}
+						toRefresh.forEach((key) => {
+							this.__fromGet([key, cookie[key]])
+						})
+						resolve(this.asGetOptions)
 					})
-					resolve(this.asGetOptions)
-				})
+				}
+				else {
+					resolve (this.asGetOptions)
+				}
 			})
 		},
 		get: (t, key: CookieStoreKeys) => {
 			return () => new Promise<CookieStoreGetOptions>((resolve) => {
-				cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
-					this.__fromGet([key, cookie[key]])
+				if (cookieStore){
+					cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+						this.__fromGet([key, cookie[key]])
+						resolve(this.asGetOptions)
+					})
+				}
+				else {
 					resolve(this.asGetOptions)
-				})
+				}
 			})
 		}
 	})
@@ -455,7 +465,7 @@ export default class SuperCookie<V = any>{
 		this.__listeners.push(listener)
 	}
 
-	static addEventListener = window?.cookieStore?.addEventListener
+	static addEventListener = cookieStore?.addEventListener
 
     static delete(name: string, pathAndDomain: {path?: string, domain?: string}): void;
 	static delete(name: string, path?: string): void
