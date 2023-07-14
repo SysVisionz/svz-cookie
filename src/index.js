@@ -1,10 +1,110 @@
-module.exports = class SuperCookie {
+var _a;
+const cookieStore = window === null || window === void 0 ? void 0 : window.cookieStore;
+class SuperCookie {
     constructor(name, parameters = {}) {
+        this.__listeners = [];
         this.toJSON = () => {
             return this.value;
         };
+        this.getValue = () => new Promise((resolve) => {
+            this.refresh(['value']).then(() => {
+                resolve(this.value);
+            });
+        });
+        this.getPath = () => new Promise((resolve) => {
+            this.refresh(['path']).then(() => {
+                resolve(this.path);
+            });
+        });
+        this.getDomain = () => new Promise((resolve) => {
+            this.refresh(['domain']).then(() => {
+                resolve(this.domain);
+            });
+        });
+        this.getExpires = () => new Promise((resolve) => {
+            this.refresh(['expires']).then(() => {
+                resolve(this.expires);
+            });
+        });
+        this.getSecure = () => new Promise((resolve) => {
+            this.refresh(['secure']).then(() => {
+                resolve(this.secure);
+            });
+        });
+        this.getSameSite = () => new Promise((resolve) => {
+            this.refresh(['sameSite']).then(() => {
+                resolve(this.sameSite);
+            });
+        });
+        this.__fromGet = ([key, value]) => {
+            switch (key) {
+                case 'name':
+                    this.name = value;
+                    break;
+                case 'domain':
+                    this.domain = value;
+                    break;
+                case 'expires':
+                    this.expires = value;
+                    break;
+                case 'path':
+                    this.path = value;
+                    break;
+                case 'sameSite':
+                    this.sameSite = value[0].toUpperCase() + value.substring(1);
+                    break;
+                case 'secure':
+                    this.secure = value;
+                    break;
+                case 'value':
+                    this.value = value;
+                    break;
+            }
+        };
+        this.refresh = new Proxy((() => { }), {
+            apply: (t, [toRefresh]) => {
+                return new Promise((resolve) => {
+                    cookieStore.get({ name: this.name }).then((cookie) => {
+                        if (!toRefresh.length) {
+                            this.name = cookie.name;
+                            this.domain = cookie.domain;
+                            this.expires = cookie.expires;
+                            this.path = cookie.path;
+                            this.sameSite = cookie.sameSite;
+                            this.secure = cookie.secure;
+                            this.value = cookie.value;
+                        }
+                        toRefresh.forEach((key) => {
+                            this.__fromGet([key, cookie[key]]);
+                        });
+                        resolve(this.asGetOptions);
+                    });
+                });
+            },
+            get: (t, key) => {
+                return () => new Promise((resolve) => {
+                    cookieStore.get({ name: this.name }).then((cookie) => {
+                        this.__fromGet([key, cookie[key]]);
+                        resolve(this.asGetOptions);
+                    });
+                });
+            }
+        });
         this.name = name;
         this.pVals = parameters;
+        if (cookieStore) {
+            cookieStore.addEventListener('change', (event) => {
+                const thisChange = event.changed.find((cookie) => cookie.name === this.name);
+                if (thisChange) {
+                    const { domain, expires, path, sameSite, value } = thisChange;
+                    this.domain = domain;
+                    this.expires = expires;
+                    this.path = path;
+                    this.sameSite = sameSite[0].toUpperCase() + sameSite.substring(1);
+                    this.value = value;
+                }
+            });
+        }
     }
     valueOf() {
         return this.value;
@@ -40,8 +140,21 @@ module.exports = class SuperCookie {
         SuperCookie.set(this.name, value, this.parameters);
     }
     set expires(value) {
+        if (!(value instanceof Date)) {
+            value = new Date(value);
+        }
+        if (isNaN(value.getTime())) {
+            throw new TypeError('Invalid Date');
+        }
         this.parameters.expires = value;
-        ;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set httpOnly(value) {
+        this.parameters.httpOnly = value;
+        SuperCookie.set(this.name, this.value, this.parameters);
+    }
+    set secure(value) {
+        this.parameters.secure = value;
         SuperCookie.set(this.name, this.value, this.parameters);
     }
     set path(value) {
@@ -72,7 +185,7 @@ module.exports = class SuperCookie {
         SuperCookie.set(this.name, this.value, this.parameters);
     }
     delete() {
-        SuperCookie.delete(this.name, this.path);
+        SuperCookie.delete(this.name, { path: this.path, domain: this.domain });
     }
     static set(name, value, parameters) {
         if (name) {
@@ -145,6 +258,17 @@ module.exports = class SuperCookie {
     static get(name, asPlainObject) {
         return this.getFull(asPlainObject)[name];
     }
+    get asGetOptions() {
+        return {
+            name: this.name,
+            domain: this.domain,
+            expires: this.expires.getTime(),
+            path: this.path,
+            sameSite: this.sameSite,
+            secure: this.secure,
+            value: this.value
+        };
+    }
     static getFull(asPlainObject) {
         return document.cookie.split(';').reduce((cookie, val) => {
             let [key, valueOf] = val.split('=');
@@ -202,8 +326,17 @@ module.exports = class SuperCookie {
             return Object.assign(Object.assign({}, cookie), { [key]: untype(val) });
         }, {});
     }
-    static delete(name, path) {
-        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path};` : ''}${domain ? ` domain=${domain}` : ''}`;
+    addEventListener(type, listener) {
+        this.__listeners.push(listener);
+    }
+    static delete(name, pathOrPathAndDomain) {
+        if (typeof pathOrPathAndDomain === 'string') {
+            pathOrPathAndDomain = { path: pathOrPathAndDomain };
+        }
+        const { path, domain } = pathOrPathAndDomain || {};
+        document.cookie = `${name}=null; max-age=0; ${path ? `path=${path};` : ''}${domain ? `domain=${domain};` : ''}`;
     }
 }
+SuperCookie.addEventListener = (_a = window === null || window === void 0 ? void 0 : window.cookieStore) === null || _a === void 0 ? void 0 : _a.addEventListener;
+export default SuperCookie;
 //# sourceMappingURL=index.js.map

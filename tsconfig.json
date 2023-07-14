@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
       "target": "es6",
+      "skipLibCheck": true,
       "module": "es2020",
       "moduleResolution": "node",
       "noImplicitAny": true,
@@ -10,5 +11,5 @@
       "lib": ["es2020", "DOM"]
     },
     "include": ["src/**/*.ts"],
-    "exclude": ["node_modules"]
+    "exclude": ["/node_modules"]
 }
