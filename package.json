@@ -1,6 +1,6 @@
 {
   "name": "supercookie",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "A tool for managing and creating the most versatile cookies ever seen without all the fuss.",
   "keywords": [
     "cookie",
@@ -8,8 +8,8 @@
     "utilities",
     "management"
   ],
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "index.d.ts",
   "scripts": {
     "start": "webpack --watch",
     "build": "tsc"

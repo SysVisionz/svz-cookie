@@ -82,7 +82,7 @@ export type CookieParams = {
     prefix?: 'host' | 'secure'
 }
 
-const cookieStore = (window || {}).cookieStore as CookieStore;
+const cookieStore = (typeof window === 'undefined' ? {} : window).cookieStore as CookieStore;
 
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;

@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+      "outDir": "./dist/",
       "target": "es6",
       "skipLibCheck": true,
       "module": "es2020",
@@ -10,6 +11,6 @@
       "sourceMap": true,
       "lib": ["es2020", "DOM"]
     },
-    "include": ["src/**/*.ts"],
+    "include": ["src/**/*.ts", "index.d.ts"],
     "exclude": ["/node_modules"]
 }
