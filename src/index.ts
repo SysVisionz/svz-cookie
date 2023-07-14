@@ -82,17 +82,16 @@ export type CookieParams = {
     prefix?: 'host' | 'secure'
 }
 
-const cookieStore = (typeof window === 'undefined' ? {} : window).cookieStore as CookieStore;
-
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;
 	name: string;
+	static getCookieStore = () => (typeof window === 'undefined' ? {} : window).cookieStore as CookieStore;
 	__listeners: ((event: CookieEvent) => void)[] = [];
 	constructor(name: string, parameters: CookieParams = {}){
 		this.name = name;
 		this.pVals = parameters;
-		if (cookieStore){
-            cookieStore.addEventListener('change', (event) => {
+		if (SuperCookie.getCookieStore()){
+            SuperCookie.getCookieStore().addEventListener('change', (event) => {
 				const thisChange = event.changed.find((cookie) => cookie.name === this.name)
 				if (thisChange){
 					const {
@@ -108,9 +107,15 @@ export default class SuperCookie<V = any>{
         }
 	}
 
-	toJSON = () => {
-	    return this.value
-    }
+	toJSON = () => ({
+		name: this.name,
+		domain: this.domain,
+		expires: (this.expires as Date).getTime(),
+		path: this.path,
+		sameSite: this.sameSite,
+		secure: this.secure,
+		value: this.value
+    })
 
 	valueOf(){
 		return this.value
@@ -349,23 +354,11 @@ export default class SuperCookie<V = any>{
 		}
 	}
 
-	get asGetOptions(): CookieStoreGetOptions{
-		return {
-			name: this.name,
-			domain: this.domain,
-			expires: (this.expires as Date).getTime(),
-			path: this.path,
-			sameSite: this.sameSite,
-			secure: this.secure,
-			value: this.value
-		}
-	}
-
 	refresh = new Proxy<CookieRefreshOptions>((() => {}) as unknown as CookieRefreshOptions, {
 		apply: (t, [toRefresh]: [CookieStoreKeys[]]) => {
 			return new Promise<CookieStoreGetOptions>((resolve) => {
-				if (cookieStore){
-					cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+				if (SuperCookie.getCookieStore()){
+					SuperCookie.getCookieStore().get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
 						if (!toRefresh.length ){
 							this.name = cookie.name;
 							this.domain = cookie.domain;
@@ -378,24 +371,24 @@ export default class SuperCookie<V = any>{
 						toRefresh.forEach((key) => {
 							this.__fromGet([key, cookie[key]])
 						})
-						resolve(this.asGetOptions)
+						resolve(this.toJSON())
 					})
 				}
 				else {
-					resolve (this.asGetOptions)
+					resolve (this.toJSON())
 				}
 			})
 		},
 		get: (t, key: CookieStoreKeys) => {
 			return () => new Promise<CookieStoreGetOptions>((resolve) => {
-				if (cookieStore){
-					cookieStore.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+				if (SuperCookie.getCookieStore()){
+					SuperCookie.getCookieStore().get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
 						this.__fromGet([key, cookie[key]])
-						resolve(this.asGetOptions)
+						resolve(this.toJSON())
 					})
 				}
 				else {
-					resolve(this.asGetOptions)
+					resolve(this.toJSON())
 				}
 			})
 		}
@@ -465,7 +458,7 @@ export default class SuperCookie<V = any>{
 		this.__listeners.push(listener)
 	}
 
-	static addEventListener = cookieStore?.addEventListener
+	static addEventListener = SuperCookie.getCookieStore()?.addEventListener
 
     static delete(name: string, pathAndDomain: {path?: string, domain?: string}): void;
 	static delete(name: string, path?: string): void
