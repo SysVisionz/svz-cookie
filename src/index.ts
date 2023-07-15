@@ -197,15 +197,19 @@ export default class SuperCookie<V = any>{
 		SuperCookie.set(this.name, value, this.parameters);
 	}
 
-	set expires(value: string | number | Date){
-		if (!(value instanceof Date)){
-			value = new Date(value)
+	set expires(value: string | number | false | Date){
+		if (value !== undefined){
+			if (!(value instanceof Date)){
+				value = new Date(value === false ? "2038-01-19 04:14:07" 
+					: value === null ? 0 
+						: value)
+			}
+			if (isNaN(value.getTime())){
+				throw new TypeError('Invalid Date')
+			}
+			this.parameters.expires = value;
+			SuperCookie.set(this.name, this.value, this.parameters)
 		}
-		if (isNaN(value.getTime())){
-			throw new TypeError('Invalid Date')
-		}
-		this.parameters.expires = value;
-		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set httpOnly(value){
