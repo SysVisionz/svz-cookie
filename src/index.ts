@@ -1,4 +1,4 @@
-type CookieStoreKeys = 'name' | 'domain' | 'expires' | 'path' | 'sameSite' | 'secure' | 'value'
+type CookieStoreKey = 'name' | 'domain' | 'expires' | 'path' | 'sameSite' | 'secure' | 'value'
 
 type CookieStoreGetOptions = {
 	name?: string,
@@ -39,7 +39,7 @@ interface CookieEvent extends Event {
 }
 
 type CookieRefreshOptions = {
-	(toRefresh: CookieStoreKeys[]): Promise<CookieStoreGetOptions>,
+	(...toRefresh: CookieStoreKey[]): Promise<CookieStoreGetOptions>,
 	name: ()  => Promise<CookieStoreGetOptions>,
 	domain: ()  => Promise<CookieStoreGetOptions>,
 	expires: ()  => Promise<CookieStoreGetOptions>,
@@ -52,6 +52,7 @@ type CookieRefreshOptions = {
 type CookieStore = {
 	getAll: (options?: CookieStoreGetOptions) => Promise<[]>,
 	addEventListener: (type: 'change', listener: (event: CookieEvent) => void) => void,
+	removeEventListener: (type: 'change', listener: (event: CookieEvent) => void) => void,
 	get: (options?: CookieStoreGetOptions) => Promise<CookieStoreGetOptions>,
 	set: (options: CookieStoreSetOptions) => Promise<undefined>,
 	delete: (options: CookieStoreDeleteOptions) => Promise<undefined>
@@ -85,32 +86,31 @@ export type CookieParams = {
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;
 	name: string;
-	static getCookieStore = () => (typeof window === 'undefined' ? {} : window).cookieStore as CookieStore;
-	__listeners: ((event: CookieEvent) => void)[] = [];
+	static cookieStore = typeof window === 'undefined' ? null : window.cookieStore as CookieStore;
+	__listeners: Map<(event: CookieEvent) => void, (evt: CookieEvent) => void> = new Map();
 	constructor(name: string, parameters: CookieParams = {}){
 		this.name = name;
 		this.pVals = parameters;
-		if (SuperCookie.getCookieStore()){
-            SuperCookie.getCookieStore().addEventListener('change', (event) => {
-				const thisChange = event.changed.find((cookie) => cookie.name === this.name)
-				if (thisChange){
-					const {
-						domain, expires, path, sameSite, value
-					} = thisChange
-					this.domain = domain;
-					this.expires = expires;
-					this.path = path;
-					this.sameSite = sameSite[0].toUpperCase() + sameSite.substring(1) as "Strict" | "Lax" | "None";
-					this.value = value;
-				}
-			})
-        }
+		this.addEventListener((event) => {
+			const thisChange = event.changed.find((cookie) => cookie.name === this.name)
+			if (thisChange){
+				const {
+					domain, expires, path, sameSite, value
+				} = thisChange
+				this.domain = domain;
+				this.expires = expires;
+				this.path = path;
+				this.sameSite = sameSite[0].toUpperCase() + sameSite.substring(1) as "Strict" | "Lax" | "None";
+				this.value = value;
+			}
+		})
+		this.refresh('value', 'domain', 'expires', 'path', 'sameSite')
 	}
 
 	toJSON = () => ({
 		name: this.name,
 		domain: this.domain,
-		expires: (this.expires as Date).getTime(),
+		expires: (this.expires as Date)?.getTime(),
 		path: this.path,
 		sameSite: this.sameSite,
 		secure: this.secure,
@@ -122,54 +122,24 @@ export default class SuperCookie<V = any>{
 	}
 
 	get value(){
-		return SuperCookie.get(this.name, true)
+		return SuperCookie.get(this.name, true).name
 	}
-
-	getValue = () => new Promise<V>((resolve) => {
-		this.refresh(['value']).then(() => {
-			resolve(this.value as V)
-		})
-	})
 
 	get path(){
 		return this.parameters.path;
 	}
 
-	getPath = () => new Promise<string>((resolve) => {
-		this.refresh(['path']).then(() => {
-			resolve(this.path)
-		})
-	})
-
 	get domain(){
 		return this.parameters.domain;
 	}
 
-	getDomain = () => new Promise<string>((resolve) => {
-		this.refresh(['domain']).then(() => {
-			resolve(this.domain)
-		})
-	})
-
 	get expires(){
 		return this.parameters.expires;
 	}
-
-	getExpires = () => new Promise<Date>((resolve) => {
-		this.refresh(['expires']).then(() => {
-			resolve(this.expires as Date)
-		})
-	})
 	
 	get secure(){
 		return this.parameters.secure;
 	}
-
-	getSecure = () => new Promise<boolean>((resolve) => {
-		this.refresh(['secure']).then(() => {
-			resolve(this.secure)
-		})
-	})
 
 	get maxAge(){
 		return this.parameters.maxAge;
@@ -178,12 +148,6 @@ export default class SuperCookie<V = any>{
 	get sameSite(){
 		return this.parameters.sameSite;
 	}
-
-	getSameSite = () => new Promise<'Strict' | 'Lax' | 'None'>((resolve) => {
-		this.refresh(['sameSite']).then(() => {
-			resolve(this.sameSite)
-		})
-	})
 
 	get httpOnly(){
 		return this.parameters.httpOnly
@@ -194,7 +158,9 @@ export default class SuperCookie<V = any>{
 	}
 
 	set value (value) {
-		SuperCookie.set(this.name, value, this.parameters);
+		typeof value === 'object'
+		? SuperCookie.set(this.name, this.value, value) 
+		: SuperCookie.set(this.name, value, this.parameters);
 	}
 
 	set expires(value: string | number | Date){
@@ -209,7 +175,6 @@ export default class SuperCookie<V = any>{
 	}
 
 	set httpOnly(value){
-		this.parameters.httpOnly = value;
 		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
@@ -234,10 +199,9 @@ export default class SuperCookie<V = any>{
 	}
 
 	set parameters(parameters: CookieParams){
-		if (parameters.maxAge){
-			parameters.maxAge
+		if (!this.httpOnly) {
+			this.pVals = parameters
 		}
-		this.pVals = parameters;
 		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
@@ -255,7 +219,7 @@ export default class SuperCookie<V = any>{
 		SuperCookie.delete(this.name, {path: this.path, domain: this.domain})
 	}
 
-	static set (name: string, value: any, parameters: CookieParams) {
+	static set (name: string, value: any, parameters?: CookieParams) {
 		if (name){
 			const typeObject = (value: any, topLevel?: boolean): string => {
 				if (value === undefined){
@@ -285,7 +249,7 @@ export default class SuperCookie<V = any>{
 			let cookieString = name + '=' + encodeURIComponent(value) + ';';
 			if (parameters){
 				for (const i in parameters){
-					if (parameters[i as keyof CookieParams]){
+					if (typeof i !== 'symbol' && parameters[i as keyof CookieParams]){
 						switch(i) {
 							case 'expires':
 								const date= typeof parameters?.expires === 'object' ? parameters?.expires : new Date(parameters?.expires);
@@ -320,7 +284,7 @@ export default class SuperCookie<V = any>{
 			document.cookie = cookieString;
 		}
 		else {
-			throw 'TypeError: Requires (name, value, [parameters]) arguments';
+			throw 'TypeError: Requires name argument';
 	    }
 	}
 
@@ -328,7 +292,7 @@ export default class SuperCookie<V = any>{
 		return this.getFull(asPlainObject)[name]
 	}
 
-	__fromGet = <K extends keyof CookieStoreGetOptions>([key, value]: [K, CookieStoreGetOptions[K] ]): void => {
+	__fromGet = <K extends keyof CookieStoreGetOptions>(key: K, value: CookieStoreGetOptions[K]): void => {
 		switch (key) {
 			case 'name':
 				this.name = value as string;
@@ -355,41 +319,22 @@ export default class SuperCookie<V = any>{
 	}
 
 	refresh = new Proxy<CookieRefreshOptions>((() => {}) as unknown as CookieRefreshOptions, {
-		apply: (t, [toRefresh]: [CookieStoreKeys[]]) => {
-			return new Promise<CookieStoreGetOptions>((resolve) => {
-				if (SuperCookie.getCookieStore()){
-					SuperCookie.getCookieStore().get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
-						if (!toRefresh.length ){
-							this.name = cookie.name;
-							this.domain = cookie.domain;
-							this.expires = cookie.expires;
-							this.path = cookie.path;
-							this.sameSite = cookie.sameSite;
-							this.secure = cookie.secure;
-							this.value = cookie.value;
-						}
-						toRefresh.forEach((key) => {
-							this.__fromGet([key, cookie[key]])
-						})
-						resolve(this.toJSON())
+		apply: (t, toRefresh: CookieStoreKey[]) => {
+			return new Promise<CookieStoreGetOptions>((resolve, rej) => {
+				SuperCookie.cookieStore?.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+					toRefresh.forEach((key) => {
+						this.__fromGet(key, cookie[key])
 					})
-				}
-				else {
-					resolve (this.toJSON())
-				}
+					resolve(this.toJSON())
+				}).catch(err => rej(err)) || resolve (this.toJSON())
 			})
 		},
-		get: (t, key: CookieStoreKeys) => {
+		get: (t, key: CookieStoreKey) => {
 			return () => new Promise<CookieStoreGetOptions>((resolve) => {
-				if (SuperCookie.getCookieStore()){
-					SuperCookie.getCookieStore().get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
-						this.__fromGet([key, cookie[key]])
-						resolve(this.toJSON())
-					})
-				}
-				else {
+				SuperCookie.cookieStore?.get({name: this.name}).then((cookie: CookieStoreGetOptions) => {
+					this.__fromGet(key, cookie[key])
 					resolve(this.toJSON())
-				}
+				}) || resolve(this.toJSON())
 			})
 		}
 	})
@@ -454,11 +399,21 @@ export default class SuperCookie<V = any>{
 		}, {})
     }
 
-	addEventListener(type: 'change', listener: (event: CookieEvent) => void){
-		this.__listeners.push(listener)
+	addEventListener(action: (event: CookieEvent) => void){
+		const val = (evt: CookieEvent) => {
+			if (evt.changed.find((cookie) => cookie.name === this.name)){
+				action(evt)
+			}
+		}
+		this.__listeners.set(action, val)
+		SuperCookie.cookieStore?.addEventListener('change', val)
 	}
 
-	static addEventListener = SuperCookie.getCookieStore()?.addEventListener
+	removeEventListener(listener: (event: CookieEvent) => void){
+		const val = this.__listeners.get(listener)
+		this.__listeners.delete(listener)
+		SuperCookie.cookieStore?.removeEventListener('change', val)
+	}
 
     static delete(name: string, pathAndDomain: {path?: string, domain?: string}): void;
 	static delete(name: string, path?: string): void
