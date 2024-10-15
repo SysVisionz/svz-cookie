@@ -1,41 +1,41 @@
 type CookieStoreKey = 'name' | 'domain' | 'expires' | 'path' | 'sameSite' | 'secure' | 'value'
 
 type CookieStoreGetOptions = {
-	name?: string,
 	domain?: string,
 	expires?: number,
+	name: string,
+	partitioned?: boolean,
 	path?: string,
+	sameSite?: 'strict' | 'lax' | 'none',
 	secure?: boolean,
-	sameSite?: 'Strict' | 'Lax' | 'None'
 	value?: string
 }
 
 type CookieStoreSetOptions = {
-	name: string,
-	value: string,
 	domain?: string,
-	path?: string,
-	secure?: boolean,
-	httpOnly?: boolean,
-	sameSite?: 'Strict' | 'Lax' | 'None',
 	expires?: Date | number,
-	maxAge?: number
+	name: string,
+	partitioned?: boolean,
+	path?: string,
+	sameSite?: 'strict' | 'lax' | 'none',
+	secure?: boolean,
+	value: string
 }
 
 type CookieStoreDeleteOptions = {
 	name: string,
-	domain?: string,
+	partitioned?: boolean,
 	path?: string,
-	secure?: boolean,
-	session?: boolean,
-	sameSite?: 'Strict' | 'Lax' | 'None'
+	domain?: string
+	url?: string
 }
 
-interface CookieEvent extends Event {
-	changed: [{
-		domain: string | null, expires: string | number, name: string, partitioned: boolean,
-		path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string
-	}]
+type ChangeObject = {
+	domain: string | null, expires: string | number, name: string, partitioned: boolean,
+	path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string
+}
+interface CookieEvent extends Omit<Event, 'target'> {
+	changed: ChangeObject[]
 }
 
 type CookieRefreshOptions = {
@@ -58,30 +58,49 @@ type CookieStore = {
 	delete: (options: CookieStoreDeleteOptions) => Promise<undefined>
 }
 
+interface CookieInstanceEvent extends CookieEvent {
+	target: ChangeObject
+}
+
 declare global {
-	interface Window {
-		cookieStore?: CookieStore
-	}
+	type Windwow = Window & {cookieStore?: CookieStore}
+}
+
+type CookieChanges = {
+    domain: string;
+    expires: string | number;
+    name: string;
+    partitioned: boolean;
+    path: string;
+    sameSite: "strict" | "lax" | "none";
+    secure: boolean;
+    value: string;
 }
 
 export type CookieParams = {
+	/** the name of the cookie */
+	name: string,
 	/** the defined date when the cookie will expire */
-	expires?: Date,
+	expires?: number,
 	/** the defined maximum age when the cookie will expire, in minutes */
 	maxAge?: number,
 	/** the path where this cookie is received */
 	path?: string,
 	/** which hosts can receive this cookie */
 	domain?: string,
+	/** Indicates that the cookie is domain locked. If this is true, secure will be ignored, since this is more strict. */
+	host?: boolean,
 	/** Indicates that the cookie is sent to the server only when a request is made with the https: scheme */
 	secure?: boolean,
 	/** Indicates that the cookie cannot be accessed through client side scripts */
 	httpOnly?: boolean,
 	/** if your cookie should be restricted to a first-party or same-site context. */
-	sameSite?: 'Strict' | 'Lax' | 'None',
+	sameSite?: 'strict' | 'lax' | 'none',
     /** whether your cookie has the __Host or __Secure prefix */
     prefix?: 'host' | 'secure'
 }
+
+const {cookieStore, document}: {cookieStore?: CookieStore, document?: Document} = typeof window === 'undefined' ? {} : window;
 
 export default class SuperCookie<V = any>{
 	pVals: CookieParams;
@@ -116,6 +135,62 @@ export default class SuperCookie<V = any>{
 		secure: this.secure,
 		value: this.value
     })
+	
+	toString = () => {
+		const p = () => {
+			const params: string[] = [`${this.name}=${this.value}`, this.expires && `expires=${this.expires}`, this.path && `path=${this.path}`, this.domain && `domain=${this.domain}`]
+			if (this.secure){
+				params.push('Secure')
+			}
+			if (this.httpOnly){
+				params.push('HttpOnly')
+			}
+			if (this.host){
+				params.unshift('__Host-')
+			}
+			else if (this.secure){
+				params.unshift('__Secure-')
+			}
+			if (this.sameSite){
+				params.push(`SameSite=${this.sameSite}`)
+			}
+			return params.filter((a) => a).join('; ')
+		}
+	}
+
+	addEventListener(listener: (event: CookieInstanceEvent) => void){
+		const theListener = (event: CookieEvent) => {
+			this.__listeners.push({
+				f: listener
+				ef: (event: CookieEvent) => {
+					new Proxy(event, {
+						get: (t, key: keyof CookieEvent) => {
+							if (key === 'target'){
+								return t.changed.find((change) => {
+									this.pVals 
+								})
+							}
+							return t[key]
+						}
+					})
+				}
+			})
+		}
+	}
+
+	get name(){ return this.pVals.name }
+
+	static addEventListener(listener: (changes: CookieChanges[]) => void){
+		this.__listeners.push(listener)
+	}
+
+	removeEventListener(listener: (changes: CookieChanges) => void){
+		this.__listeners = this.__listeners.filter((l) => l !== listener)
+	}
+
+	static removeEventListener(listener: (changes: CookieChanges[]) => void){
+		this.listeners = this.listeners.filter((l) => l !== listener)
+	}
 
 	valueOf(){
 		return this.value
@@ -163,15 +238,19 @@ export default class SuperCookie<V = any>{
 		: SuperCookie.set(this.name, value, this.parameters);
 	}
 
-	set expires(value: string | number | Date){
-		if (!(value instanceof Date)){
-			value = new Date(value)
+	set expires(value: string | number | false | Date){
+		if (value !== undefined){
+			if (!(value instanceof Date)){
+				value = new Date(value === false ? "2038-01-19 04:14:07" 
+					: value === null ? 0 
+						: value)
+			}
+			if (isNaN(value.getTime())){
+				throw new TypeError('Invalid Date')
+			}
+			this.parameters.expires = value;
+			SuperCookie.set(this.name, this.value, this.parameters)
 		}
-		if (isNaN(value.getTime())){
-			throw new TypeError('Invalid Date')
-		}
-		this.parameters.expires = value;
-		SuperCookie.set(this.name, this.value, this.parameters)
 	}
 
 	set httpOnly(value){
@@ -216,7 +295,7 @@ export default class SuperCookie<V = any>{
 	}
 
 	delete(){
-		SuperCookie.delete(this.name, {path: this.path, domain: this.domain})
+		SuperCookie.delete({name: this.name, path: this.path, domain: this.domain})
 	}
 
 	static set (name: string, value: any, parameters?: CookieParams) {
@@ -307,7 +386,7 @@ export default class SuperCookie<V = any>{
 				this.path = value as string;
 				break;
 			case 'sameSite':
-				this.sameSite = (value as string)[0].toUpperCase() + (value as string).substring(1) as 'Strict' | 'Lax' | 'None';
+				this.sameSite = (value as string)[0].toLowerCase() + (value as string).substring(1) as 'strict' | 'lax' | 'none';
 				break;
 			case 'secure':
 				this.secure = value as boolean;
@@ -421,8 +500,8 @@ export default class SuperCookie<V = any>{
 		if (typeof pathOrPathAndDomain === 'string'){
 			pathOrPathAndDomain = {path: pathOrPathAndDomain}
 		}
-		const {path, domain} = pathOrPathAndDomain || {}
-		document.cookie=`${name}=null; max-age=0; ${path ? `path=${path};` : ''}${domain ? `domain=${domain};` : ''}`
     }
 
 }
+
+cookieStore?.addEventListener('change', SuperCookie.__runListeners)
