@@ -30,6 +30,15 @@ interface CookieEvent extends Omit<Event, 'target'> {
 	changed: ChangeObject[]
 }
 
+interface TargetedCookieEvent extends CookieEvent{
+	change: ChangeObject
+}
+
+type ChangeObject = {
+	domain: string | null, expires: string | number, name: string, partitioned: boolean,
+	path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string
+}
+
 declare type CookieStore = {
 	getAll: (options?: CookieStoreGetOptions) => Promise<[]>,
 	addEventListener: (type: 'change', listener: (event: CookieEvent) => void) => void,
