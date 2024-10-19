@@ -327,7 +327,7 @@ export default class SuperCookie<V = any>{
 	set (params?: Omit<SuperCookieSetOptions, 'name'>): void;
 	set (value: any, params?: Omit<SuperCookieSetOptions, 'name' | 'value'>): void 
 	set (valueOrParams?: any | Omit<SuperCookieSetOptions, 'name'>, params?: Omit<SuperCookieSetOptions, 'name' | 'value'>) {
-		SuperCookie.set(this.name as string, valueOrParams, params)
+		return SuperCookie.set(this.name as string, valueOrParams, params)
 	}
 
 	
