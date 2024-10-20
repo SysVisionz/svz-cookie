@@ -270,12 +270,11 @@ export default class SuperCookie<V = any>{
 									}
 								}
 								return v;
-							case 'sameSite':
-								return v[0].toUpperCase() + v.substring(1)
-							case 'value':
-								return p === 'cookie' ? this.__cookievalueConvert(v, true) : typeof v === 'string' ? this.__superCookieValueConvert(v) : v
+								case 'value':
+									return p === 'cookie' ? this.__cookievalueConvert(v, true) : typeof v === 'string' ? this.__superCookieValueConvert(v) : v
 							case 'name':
 								v = v.toString()
+							case 'sameSite':
 							case 'domain':
 							case 'path':
 								return v
@@ -293,31 +292,31 @@ export default class SuperCookie<V = any>{
 	// #endregion
 
 	set name(value) {
-		this.parameters.name = String(value)
+		this.pVals.name = String(value)
 	}
 
 	set expires(value: string | number | false | Date | null){
-		this.parameters.expires = (value instanceof Date  || !value ? value : new Date(value as string | number)) as Date | false
+		this.pVals.expires = SuperCookie.__formatter.superCookie({expires: value}).expires
 	}
 
 	set secure(value){
-		this.parameters.secure = value;
+		this.pVals.secure = value;
 	}
 
 	set path(value){
-		this.parameters.path = value;
+		this.pVals.path = value;
 	}
 
 	set domain(value){
-		this.parameters.domain = value;
+		this.pVals.domain = value;
 	}
 
-	set parameters(parameters: Omit<SuperCookieSetOptions, 'name'> & {name: string | number}){
-		this.pVals = SuperCookie.__formatter.superCookie(parameters) as SuperCookieDefaults
+	set parameters(parameters: Omit<SuperCookieSetOptions<V>, 'name'> & {name: string | number}){
+		this.pVals = SuperCookie.__formatter.superCookie(parameters) as SuperCookieDefaults<V>
 	}
 
 	set sameSite(sameSite){
-		this.pVals.sameSite = SuperCookie.__formatter.superCookie({sameSite}).sameSite
+		this.pVals.sameSite = sameSite;
 	}
 
 	set preserveFalsyExpirations(value){
