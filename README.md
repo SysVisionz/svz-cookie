@@ -23,13 +23,17 @@ new SuperCookie(name)
 
 * **name**  
 type: ***String***  
-The cookie being utilized by SuperCookie.
+The name of the cookie being utilized by SuperCookie.
 
 * **value**  
 type:***String***  
 Retrieves or sets the value for the cookie of the given **name** value.
 
-**NOTE:** The following values cannot retrieve the current parameters of a cookie. They are defined within the SuperCookie, and modify the cookie accordingly, but until they are set these values are **undefined**.
+* **ready**  
+type ***Boolean***  
+This tells you whether the initial cookieStore fetch has completed. 
+
+**NOTE:** The following values can only be retrieved after the initial cookieStore fetch, which is indicated with **SuperCookie.prototype.ready**. Until this is true, they will return **undefined**.
 
 * **path**  
 type: ***String***  
