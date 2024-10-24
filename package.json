@@ -13,6 +13,7 @@
   "scripts": {
     "start": "webpack --watch",
     "build": "tsc",
+    "build-tests": "tsc --p testsConfig.json",
     "preinstall": "node dist/preinstall.js",
     "postinstall": "node dist/postinstall.js"
   },
@@ -32,9 +33,12 @@
     "@babel/plugin-proposal-class-properties": "^7.7.4",
     "@babel/preset-env": "^7.7.4",
     "@babel/preset-typescript": "^7.16.7",
+    "@types/mocha": "^10.0.9",
     "@types/node": "^17.0.24",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "express": "^4.21.1",
+    "mocha": "^10.7.3",
     "typescript": "^5.6.3",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"

@@ -1,7 +1,8 @@
 {
     "compilerOptions": {
-      "outDir": "./dist/",
+      "outDir": "/tests",
       "target": "es6",
+      "allowSyntheticDefaultImports": true,
       "skipLibCheck": true,
       "module": "es2020",
       "moduleResolution": "node",
@@ -12,6 +13,5 @@
       "sourceMap": true,
       "lib": ["es2020", "DOM"]
     },
-    "include": ["src/**/*.ts", "index.d.ts"],
-    "exclude": ["/node_modules", "/tests-ts", "/tests"]
+    "include": ["tests-ts/**/*.ts"]
 }
