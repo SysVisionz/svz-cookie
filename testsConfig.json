@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "outDir": "/tests",
+      "outDir": "tests",
       "target": "es6",
       "allowSyntheticDefaultImports": true,
       "skipLibCheck": true,
