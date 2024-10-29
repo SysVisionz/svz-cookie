@@ -20,15 +20,8 @@ type CookieStoreDeleteOptions = {
 	partitioned?: boolean,
 }
 
-interface CookieEvent extends Omit<Event, 'target'> {
-	changed: (CookieStoreGetObject & {name: string})[]
-}
-
-interface TargetedCookieEvent extends CookieEvent{
-	change: (CookieStoreGetObject & {name: string})
-}
-
 interface CookieStoreGetObject {
+	name: string,
 	domain: string | null, expires: number | null, partitioned: boolean,
 	path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string | null
 }
