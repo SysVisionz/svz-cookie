@@ -1,7 +1,9 @@
 {
     "compilerOptions": {
-      "outDir": "/tests",
+      "outDir": "test",
+      "rootDir": "./test-ts",
       "target": "es6",
+      "noEmit": false,
       "allowSyntheticDefaultImports": true,
       "skipLibCheck": true,
       "module": "es2020",
@@ -11,7 +13,10 @@
       "removeComments": true,
       "preserveConstEnums": true,
       "sourceMap": true,
-      "lib": ["es2020", "DOM"]
+      "lib": ["es2020", "DOM"],
+      "declaration": true,
+      "esModuleInterop": true
     },
-    "include": ["tests-ts/**/*.ts"]
+    "include": ["test-ts/**/*.ts"],
+    "exclude": ["node_modules", "dist", "src"]
 }
