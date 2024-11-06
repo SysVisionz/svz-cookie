@@ -7,10 +7,13 @@ const app = express()
 
 const server = http.createServer(app);
 
-app.get('/supercookie', (req, res) => readFile('../dist/index.js', (err, data) => {res.send(data.toJSON())}))
-
 app.get ('*', function(req, res) {
-	res.sendFile('index.html', {root: path.join(__dirname, '/tests/')});
+	res.send(`<html>
+	<script src="http://localhost:3000/supercookie"></script>
+	<body>
+		<p id="loaded">Hello there, Clarice</p>
+	</body>
+</html>`);
 })
 
 server.listen(3000, () => {console.log('testing up on 3000')})
