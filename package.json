@@ -16,7 +16,7 @@
     "build-tests": "tsc --p testConfig.json",
     "preinstall": "node dist/preinstall.js",
     "postinstall": "node dist/postinstall.js",
-    "test-setup": "node tests/server.js",
+    "test-setup": "node test/server.js",
     "test": "mocha"
   },
   "repository": {

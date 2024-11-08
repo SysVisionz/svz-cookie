@@ -123,9 +123,7 @@ export default class SuperCookie<V = any>{
 		}
 		this.__pVals = SuperCookie.__formatter.superCookie(value ? {name, value}: curr, {preserveFalsyExpirations: params.preserveFalsyExpirations}) as SuperCookieDefaults<V>
 		this.set = this.set.bind(this)
-		if (params.onReady){
-			this.onReady = params.onReady.bind(this)
-		}
+		this.onReady = params.onReady?.bind(this)
 		SuperCookie.get(name, {preserveFalsyExpirations: params.preserveFalsyExpirations}).then((cookie) => {
 			this.__pVals = {
 				...cookie,
@@ -209,7 +207,7 @@ export default class SuperCookie<V = any>{
 					if (!this.equals(curr)){
 						this.set().then(() => {
 							this.ready = true;
-							this.onReady()
+							this.onReady?.()
 						})
 					}
 				})
@@ -282,7 +280,7 @@ export default class SuperCookie<V = any>{
 				if (!this.equals(cookie)){
 					this.set().then(() => {
 						this.ready = true;
-						this.onReady()
+						this.onReady?.()
 					})
 				}
 			})
@@ -378,7 +376,7 @@ export default class SuperCookie<V = any>{
 
 	equals = (cookie: CookieStoreGetReturn | SuperCookieSetOptions) =>  SuperCookie.equals(this, cookie)
 
-	get = () => SuperCookie.get(this.name, {preserveFalsyExpirations: this.preserveFalsyExpirations})
+	get = () => this.ready ? SuperCookie.get(this.name, {preserveFalsyExpirations: this.preserveFalsyExpirations}) : new Promise((res) => {res(this.getSync())})
 
 	getSync = (): {name: string, value: string} => SuperCookie.getSync(this.name)
 
