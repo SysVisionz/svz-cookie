@@ -26,10 +26,10 @@ describe("Basic test of cookie retrieval functionality", function () {
     await driver.executeScript(`
 class Elem {
   constructor(id){
-    this.t = document.getElementById('loaded')
+    this.id = id
   }
   get text(){ return this.t.innerText}
-  set text(v){ this.t.innerText = ['number', 'string'].includes(typeof v) ? v : JSON.stringify(v)}
+  set text(v){ this.t}
 }
 window.elem = new Elem('loaded')`)
   })
@@ -40,26 +40,26 @@ window.elem = new Elem('loaded')`)
     }
   });
 
-  testVal = async (script: string): Promise<string | {[key: string]: any}> => {
+  testVal = async (script: string, ...args: any[]): Promise<string | {[key: string]: any}> => {
     const isPromise = !!script.match(/^new Promise/)
-    script = isPromise ?`
-${script}.then(v => {
-  elem.text = await (async () => return {${script}})()
-});`:`
-elem.text = (() => {${script}})()`
-    console.log(script)
-    return await (isPromise ? driver.executeAsyncScript(script) : driver.executeScript(script))
+    script = `const done = arguments[arguments.length-1]
+    const setText = (v) => document.getElementById('loaded').innerText = ['string', 'number'].includes(typeof v) ? v : JSON.stringify(v)
+    ${isPromise ? `(() => {${script}.then(v => {
+      setText(v)
+      done()
+    })})(...arguments)` : ` setText((() => {${script}})(...arguments))`}`
+    await driver.executeAsyncScript(script, args)
+    return await driver.findElement(By.id("loaded")).getText()
   }
 
   it("should input values in a form and check their sum", async function () {
-    expect (await testVal(`
-      new SuperCookie({name: "hi", value: "clarice"})
-      const check = SuperCookie.getAllSync()
-      return check;
-`)).to.eql('{name: "hi", value: "clarice"}');
+    expect( await testVal(`new SuperCookie({'hi', 'clarice'});
+return 'hi'`)).to.eql('hi')
+    expect (await testVal(`new Promise((res, rej) => {
+      new SuperCookie({name: "hi", value: "clarice"}).then(cookie => {res(cookie.asObject())})
+    })`)).to.eql('{name: "hi", value: "clarice"}');
     expect(await testVal(`new Promise((res, rej) => {
-  bonk = new SuperCookie('hi', 'clarice')
-  bonk.get().then(got => res(got.value))
+    new SuperCookie('hi', 'clarice').then(bonk => res(got.value))
 })`)).to.eql('clarice')
   })
 })

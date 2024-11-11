@@ -127,12 +127,14 @@ export default class SuperCookie<V = any>{
 		this.set = this.set.bind(this)
 		this.onReady = params.onReady?.bind(this)
 		SuperCookie.get(name, {preserveFalsyExpirations: params.preserveFalsyExpirations}).then((cookie) => {
-			this.__pVals = {
+			this.__pVals = SuperCookie.__formatter.superCookie({
 				...cookie,
 				...this.__pVals
-			} as SuperCookieDefaults
+			}) as SuperCookieDefaults
 			if (!this.equals(cookie)){
 				this.set().then(() => {
+					this.__theThenValue(this as SuperCookie);
+					this.__thenHolder = null;
 					this.addEventListener((event) => {
 						if (!this.ready && !this.equals(event.change)){
 							this.__pVals = SuperCookie.__formatter.superCookie({...event.change, ...{preserveFalsyExpirations: this.preserveFalsyExpirations}}) as SuperCookieDefaults<V>
@@ -235,18 +237,13 @@ export default class SuperCookie<V = any>{
 	}
 
 	private get __theThenValue() {
-		if (this.ready){
-			throw "SuperCookie.prototype.then is only retrievable before SuperCookie is ready."
-		}
 		if (this.__thenHolder === null){
 			throw "then has already been retrieved. SuperCookie.then should never be retrieved outside of internal processes."
 		}
-		const theThen = this.__thenHolder
-		this.__thenHolder = null;
-		return theThen;
+		return this.__thenHolder;
 	}
 
-	private __thenHolder: () => void;
+	private __thenHolder: (cookie: SuperCookie) => void;
 	
 	get value(){
 		return this.parameters.value 
@@ -328,10 +325,7 @@ export default class SuperCookie<V = any>{
 		})
 	}
 
-	private set __theThenValue (func: () => void) {
-		if (this.ready) {
-			throw "SuperCookie.prototype.then cannot be used on a SuperCookie that is already in ready state."
-		}
+	private set __theThenValue (func: (cookie: SuperCookie) => void) {
 		if (this.__thenHolder === null){
 			throw "Then has already been returned. Cannot set the then function now."
 		}
@@ -518,7 +512,14 @@ export default class SuperCookie<V = any>{
 	//** Retrieves all cookie elements for this document's cookies as an object of SuperCookies indexed by name. */
 	static getAll(options: {preserveFalsyExpirations?: boolean}): Promise<SuperCookieDefaults[]> { return new Promise((res, rej) => {
 		SuperCookie.__cookieStore.getAll().then((cookies) => {
-			const processed = cookies.map((cookie) =>  this.__formatter.superCookie(cookie, options) as SuperCookieDefaults)
+			const processed = cookies.map((cookie) =>  {
+				for (const i in cookie){
+					if (cookie[i as keyof typeof cookie] === null){
+						delete cookie[i]
+					}
+				}
+				return this.__formatter.superCookie(cookie, options) as SuperCookieDefaults
+			})
 			res(processed)
     	}).catch((err) => {
 			rej({message : err?.message || err})
