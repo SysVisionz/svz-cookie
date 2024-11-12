@@ -16,8 +16,7 @@
     "build-tests": "tsc --p testConfig.json",
     "preinstall": "node dist/preinstall.js",
     "postinstall": "node dist/postinstall.js",
-    "test-setup": "node test/server.js",
-    "test": "mocha"
+    "test": "npm run build-tests && mocha"
   },
   "repository": {
     "type": "git",
@@ -39,14 +38,12 @@
     "@types/express": "^5.0.0",
     "@types/mocha": "^10.0.9",
     "@types/node": "^17.0.24",
-    "@types/selenium-webdriver": "^4.1.27",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "chai": "^5.1.2",
-    "chromedriver": "^130.0.1",
     "express": "^4.21.1",
-    "mocha": "^10.7.3",
-    "selenium-webdriver": "^4.25.0",
+    "mocha": "^10.8.2",
+    "puppeteer": "^23.7.1",
     "typescript": "^5.6.3",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"

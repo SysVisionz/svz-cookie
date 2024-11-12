@@ -30,7 +30,7 @@ interface CookieEvent extends Omit<Event, 'target'> {
 	changed: (CookieStoreGetObject & {name: string})[]
 }
 
-interface SuperCookieInitOptions<V = any> {
+export interface SuperCookieInitOptions<V = any> {
 	domain?: string,
 	/** 
 	 * string will be processed into a Date Object then into a number.
