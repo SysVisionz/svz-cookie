@@ -90,7 +90,7 @@ interface Formatter<V = any> {
 		[K in keyof (CookieStoreSetOptions | CookieStoreGetReturn)]: (value: CookieStoreSetOptions[K] | CookieStoreGetReturn[K]) => SuperCookieDefaults[K]
 	}, 'expires' | 'value' > & {
 		'value': (value: V | string) => SuperCookieDefaults<V>["value"]
-		'expires': (value: CookieStoreSetOptions['expires'] | CookieStoreGetReturn["expires"], preserveFalsyExpirations?: boolean) => SuperCookieDefaults<V>["expires"]
+		'expires': (value: CookieStoreSetOptions['expires'], preserveFalsyExpirations?: boolean) => SuperCookieDefaults<V>["expires"]
 	}
 }
 
@@ -103,7 +103,7 @@ interface TargetedSuperCookieEvent<V = any> extends SuperCookieEvent<V>{
 }
 
 export default class SuperCookie<V = any>{
-	__pVals: SuperCookieDefaults<V>;
+	__pVals: SuperCookieDefaults<V> = {} as SuperCookieDefaults<V>;
 	static __listeners: Map<(event: SuperCookieEvent) => void, (evt: CookieEvent) => void> = new Map();
 	constructor(parameters: Omit<SuperCookieInitOptions<V>, 'name'> & {name: string | number})
 	constructor(name: SuperCookieInitOptions['name'], parameters?: Omit<SuperCookieInitOptions<V>, 'name'>)
@@ -127,16 +127,15 @@ export default class SuperCookie<V = any>{
 		this.set = this.set.bind(this)
 		this.onReady = params.onReady?.bind(this)
 		SuperCookie.get(name, {preserveFalsyExpirations: params.preserveFalsyExpirations}).then((cookie) => {
-			this.__pVals = SuperCookie.__formatter.superCookie({
-				...cookie,
-				...this.__pVals
-			}) as SuperCookieDefaults
-			if (!this.equals(cookie)){
-				this.set().then(() => {
-					this.__theThenValue(this as SuperCookie);
+			if (cookie && cookie.expires === null){
+				delete cookie.expires
+			}
+			if (!cookie || !this.equals(cookie)){
+				this.set({...cookie, ...this.parameters()}).then(() => {
+					this.__theThenValue?.(this as SuperCookie);
 					this.__thenHolder = null;
 					this.addEventListener((event) => {
-						if (!this.ready && !this.equals(event.change)){
+						if (this.ready && !this.equals(event.change)){
 							this.__pVals = SuperCookie.__formatter.superCookie({...event.change, ...{preserveFalsyExpirations: this.preserveFalsyExpirations}}) as SuperCookieDefaults<V>
 						}
 					})
@@ -167,30 +166,33 @@ export default class SuperCookie<V = any>{
 		return String(this.parameters.name)
 	}
 	
-	get parameters(): SuperCookieDefaults<V>{
-		return new Proxy(this.__pVals, {
+	get parameters(): SuperCookieDefaults<V> & {(): SuperCookieDefaults} {
+		return new Proxy(() => this.__pVals, {
+			apply: (t, thisArg, args) => {
+				return this.__pVals
+			},
 			get: (t, p, r) => {
-				return t[p as keyof typeof t]
+				return this.__pVals[p as keyof typeof this.__pVals]
 			},
 			set: (t: SuperCookieDefaults<V>, p: keyof SuperCookieDefaults<V>, v, r) => {
 				const val = (SuperCookie.__formatter.superCookie[p as keyof typeof SuperCookie.__formatter.superCookie] as (v: any, preserveFalsyExpirations?: boolean) => SuperCookieDefaults<V>[keyof SuperCookieDefaults])(v, this.preserveFalsyExpirations)
 				this.ready = false;
 				switch (p){
 					case 'expires':
-						t.expires = val as SuperCookieDefaults<V>["expires"];
+						this.__pVals.expires = this.__formatter.superCookie.expires(val as number);
 						break;
 					case 'preserveFalsyExpirations':
 					case 'partitioned':
 					case "secure":
-						t[p] = val as boolean
+						this.__pVals[p] = val as boolean
 						break;
 					case 'name':
 					case 'domain':
 					case 'path':
-						t[p] = val as string
+						this.__pVals[p] = val as string
 						break;
 					case 'value':
-						t.value = val as V
+						this.__pVals.value = val as V
 						break
 					case 'onReady':
 						this.onReady = val as () => void
@@ -250,7 +252,7 @@ export default class SuperCookie<V = any>{
 	}			
 
 	set value(value){
-		this.parameters.value = this.__formatter.superCookie.value(value);
+		this.parameters.value = value;
 	}
 	
 	set domain(value){
@@ -258,7 +260,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	set expires(value: string | number | false | Date | null){
-		this.parameters.expires = this.__formatter.superCookie({expires: value}).expires
+		this.parameters.expires = value as any
 	}
 	
 	set name(value) {
@@ -490,22 +492,22 @@ export default class SuperCookie<V = any>{
     static delete(name: string, pathAndDomain: {path?: string, domain?: string}): void;
 	static delete(name: string, path?: string): void
 	static delete(name: string, pathOrPathAndDomain?: string | {path?: string, domain?: string}) {
-		const {path, domain}: {path?: string, domain?: string} = pathOrPathAndDomain 
-			? typeof pathOrPathAndDomain === 'string'
-				? {path: pathOrPathAndDomain}
-				: pathOrPathAndDomain
-			: {}
-		const options: Omit<CookieStoreSetOptions, 'name'> = {
-			...(path === undefined ? {} : {path}),
-			...(domain === undefined ? {} : {domain}),
-			expires: 0
-		}
-		this.set(name, options)
+			const {path, domain}: {path?: string, domain?: string} = pathOrPathAndDomain 
+				? typeof pathOrPathAndDomain === 'string'
+					? {path: pathOrPathAndDomain}
+					: pathOrPathAndDomain
+				: {}
+			const options: {name: string, path?: string, domain?: string} = {
+				name,
+				...(path === undefined ? {} : {path}),
+				...(domain === undefined ? {} : {domain}),
+			}
+			this.__cookieStore.delete(options)
     }
 
     static get (name: string, options?: {preserveFalsyExpirations?: boolean}) {
 		return new Promise<SuperCookieDefaults>(res => {
-			this.getAll(options).then(cookies => {res(cookies.find(v => v.name === name))})
+			this.getAll(options).then(cookies => {res(cookies.find(v => v.name === name) || null)})
 		})
 	}
 

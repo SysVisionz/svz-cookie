@@ -64,7 +64,7 @@ type: ***Boolean***
 This tells you whether the initial cookieStore fetch has completed.
 
 * **parameters**  
-type: **Object**  
+type: ***Object*** | ***() => Object***  
 Retrieves or sets the provided parameters for the cookie of the given **name** in the format of default SuperCookie formatting.
 
 ## Methods

@@ -16,7 +16,7 @@
     "build-tests": "tsc --p testConfig.json",
     "preinstall": "node dist/preinstall.js",
     "postinstall": "node dist/postinstall.js",
-    "test": "npm run build-tests && mocha"
+    "test": "npm run build && xdg-open \"http://localhost:3000\" && node ./test/server.js"
   },
   "repository": {
     "type": "git",
