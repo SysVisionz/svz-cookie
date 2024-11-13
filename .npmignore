@@ -3,5 +3,5 @@
 /test-ts
 testsConfig.json
 tsConfig.json
-index.d.ts
+/index.d.ts
 test.*
