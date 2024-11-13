@@ -103,8 +103,8 @@ interface TargetedSuperCookieEvent<V = any> extends SuperCookieEvent<V>{
 }
 
 export default class SuperCookie<V = any>{
-	__pVals: SuperCookieDefaults<V> = {} as SuperCookieDefaults<V>;
-	static __listeners: Map<(event: SuperCookieEvent) => void, (evt: CookieEvent) => void> = new Map();
+	private __pVals: SuperCookieDefaults<V> = {} as SuperCookieDefaults<V>;
+	private static __listeners: Map<(event: SuperCookieEvent) => void, (evt: CookieEvent) => void> = new Map();
 	constructor(parameters: Omit<SuperCookieInitOptions<V>, 'name'> & {name: string | number})
 	constructor(name: SuperCookieInitOptions['name'], parameters?: Omit<SuperCookieInitOptions<V>, 'name'>)
 	/** when using this style and not including parameters as the third argument, the value MUST NOT be an object with a key called "value", or this will break. */
@@ -306,7 +306,7 @@ export default class SuperCookie<V = any>{
 		return SuperCookie.__listeners
 	}
 
-	__formatter: Formatter<V> = {
+	private __formatter: Formatter<V> = {
 		superCookie: new Proxy((() => {}) as unknown as Formatter["superCookie"], {
 			apply: (t, thisArg, [v, options]: [SuperCookieSetOptions, {preserveFalsyExpirations: boolean}] | [SuperCookieSetOptions]) => {
 				const {preserveFalsyExpirations = this.preserveFalsyExpirations} = options || {}
@@ -457,7 +457,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	valueOf(){
-		return this.value
+		return this.parameters()
 	}
 
 	static addEventListener <V = any>(listener: (evt: SuperCookieEvent<V>) => void){
@@ -612,7 +612,7 @@ export default class SuperCookie<V = any>{
 	
 	static get __dCookie() { return typeof window === 'undefined' ? null : window.document.cookie}
 	
-	__prune = <K extends (keyof SuperCookieDefaults<V>)[]>(...args: K): Omit<SuperCookieDefaults<V>, K[number]> => {
+	private __prune = <K extends (keyof SuperCookieDefaults<V>)[]>(...args: K): Omit<SuperCookieDefaults<V>, K[number]> => {
 		let superCookie: Omit<SuperCookieDefaults<V>, K[number]>  = this.asObject()
 		for (const key of args){
 			delete superCookie[key as keyof typeof superCookie]
@@ -620,7 +620,7 @@ export default class SuperCookie<V = any>{
 		return superCookie
 	}
 	
-	static __compareObject = (obj: {[key: string]: any}, obj2: {[key: string]: any}) => {
+	private static __compareObject = (obj: {[key: string]: any}, obj2: {[key: string]: any}) => {
 		for (const i of Object.keys({...obj, ...obj2})){
 			const val1 = obj[i as keyof typeof obj]
 			const val2 = obj2[i as keyof typeof obj2]
@@ -635,7 +635,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	// #region to Cookie value
-	static __cookievalueConvert = (value: any, topLevel?: boolean): string => {
+	private static __cookievalueConvert = (value: any, topLevel?: boolean): string => {
 		if (value === undefined){
 			return 'undefined:undefined'
 		}
@@ -729,7 +729,7 @@ export default class SuperCookie<V = any>{
 	})
 	// #endregion
 	
-	static __getAllSimpleSync = <V = any>() => {
+	private static __getAllSimpleSync = <V = any>() => {
 		return this.__dCookie.split(';').reduce((full, v) => {
 			const [name, value] = v.trim().split('=') as [SuperCookieDefaults["name"], SuperCookieDefaults["value"]]
 			full[name] = {name, value};
@@ -737,7 +737,7 @@ export default class SuperCookie<V = any>{
 		}, {} as {[key: string]: SuperCookieDefaults<V>})
 	}
 	
-	static __sortFromArgs = <V extends any>(
+	private static __sortFromArgs = <V extends any>(
 		nameOrParameters?: string | number | (Omit<SuperCookieInitOptions, 'name'> & {name: string | number}),
 		valueOrParameters?: Partial<Omit<SuperCookieInitOptions, 'name'>> | any,
 		params?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>
@@ -756,7 +756,7 @@ export default class SuperCookie<V = any>{
 	}
 
 	// #region to SuperCookie value
-	static __superCookieValueConvert = (value: any, topLevel?: boolean): any => {
+	private static __superCookieValueConvert = (value: any, topLevel?: boolean): any => {
 		if (value instanceof Array){
 			return value.map(value => this.__superCookieValueConvert(value))
 		}
