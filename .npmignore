@@ -1,6 +1,6 @@
 /src
-/tests
-/tests-ts
+/test
+/test-ts
 testsConfig.json
 tsConfig.json
 index.d.ts
