@@ -105,6 +105,7 @@ interface TargetedSuperCookieEvent<V = any> extends SuperCookieEvent<V>{
 export default class SuperCookie<V = any>{
 	private __pVals: SuperCookieDefaults<V> = {} as SuperCookieDefaults<V>;
 	private static __listeners: Map<(event: SuperCookieEvent) => void, (evt: CookieEvent) => void> = new Map();
+	
 	constructor(parameters: Omit<SuperCookieInitOptions<V>, 'name'> & {name: string | number})
 	constructor(name: SuperCookieInitOptions['name'], parameters?: Omit<SuperCookieInitOptions<V>, 'name'>)
 	/** when using this style and not including parameters as the third argument, the value MUST NOT be an object with a key called "value", or this will break. */
@@ -149,23 +150,80 @@ export default class SuperCookie<V = any>{
 		if (!name){}
 	}
 
+// #region parameter setters and getters.	
+
+	get name(){
+		return String(this.parameters.name)
+	}
 	
-	get cookie () {
-		return this.__formatter.cookie(this.__pVals)
+	set name(value) {
+		throw "name is a read only attribute"
+	}
+	
+	get value(){
+		return this.parameters.value 
+	}			
+	
+	set value(value){
+		this.parameters.value = value;
 	}
 	
 	get domain(){
 		return this.parameters.domain;
 	}
 	
+	set domain(value){
+		this.parameters.domain = value;
+	}
+	
 	get expires(){
 		return this.parameters.expires;
 	}
-
-	get name(){
-		return String(this.parameters.name)
+	
+	set expires(value: string | number | false | Date | null){
+		this.parameters.expires = value as any
 	}
 	
+	get partitioned() {
+		return this.parameters.partitioned
+	}
+
+	set partitioned(v){
+		this.parameters.partitioned = v;
+	}
+	
+	get path(){
+		return this.parameters.path;
+	}
+	
+	set path(value){
+		this.parameters.path = value;
+	}
+
+	get sameSite(){
+		return this.parameters.sameSite;
+	}		
+	
+	set sameSite(sameSite){
+		this.parameters.sameSite = sameSite;
+	}	
+	
+	get secure(){
+		return this.parameters.secure;
+	}
+	
+	set secure(value){
+		this.parameters.secure = value;
+	}
+	
+	get cookie () {
+		return this.__formatter.cookie(this.__pVals)
+	}
+
+	set cookie (v) {
+		throw "cookie is readonly"
+	}
+
 	get parameters(): SuperCookieDefaults<V> & {(): SuperCookieDefaults} {
 		return new Proxy(() => this.__pVals, {
 			apply: (t, thisArg, args) => {
@@ -216,57 +274,6 @@ export default class SuperCookie<V = any>{
 		})
 	}
 
-	get partitioned() {
-		return this.parameters.partitioned
-	}
-	
-	get path(){
-		return this.parameters.path;
-	}
-	
-	get preserveFalsyExpirations(){
-		return this.parameters.preserveFalsyExpirations;
-	}
-
-	ready: boolean = false;
-	
-	get sameSite(){
-		return this.parameters.sameSite;
-	}		
-	
-	get secure(){
-		return this.parameters.secure;
-	}
-
-	private get __theThenValue() {
-		if (this.__thenHolder === null){
-			throw "then has already been retrieved. SuperCookie.then should never be retrieved outside of internal processes."
-		}
-		return this.__thenHolder;
-	}
-
-	private __thenHolder: (cookie: SuperCookie) => void;
-	
-	get value(){
-		return this.parameters.value 
-	}			
-
-	set value(value){
-		this.parameters.value = value;
-	}
-	
-	set domain(value){
-		this.parameters.domain = value;
-	}
-	
-	set expires(value: string | number | false | Date | null){
-		this.parameters.expires = value as any
-	}
-	
-	set name(value) {
-		this.parameters.name = String(value)
-	}
-
 	set parameters(parameters: Omit<SuperCookieSetOptions<V>, 'name'> & {name: string | number}){
 		this.__pVals = this.__formatter.superCookie(parameters) as SuperCookieDefaults<V>
 		if (this.ready){
@@ -282,27 +289,33 @@ export default class SuperCookie<V = any>{
 		}
 	}
 	
-	set path(value){
-		this.parameters.path = value;
-	}
+	ready: boolean = false;
+	
+	preserveFalsyExpirations: boolean;
 
-	set preserveFalsyExpirations(value){
-		this.parameters.preserveFalsyExpirations = value
-	}
+// #endregion
 
-	set sameSite(sameSite){
-		this.parameters.sameSite = sameSite;
+// #region private methods
+
+	private get __theThenValue() {
+		if (this.__thenHolder === null){
+			throw "then has already been retrieved. SuperCookie.then should never be retrieved outside of internal processes."
+		}	
+		return this.__thenHolder;
 	}	
+	
+	private __thenHolder: (cookie: SuperCookie) => void;
+	
+// #endregion
+	
 
-	set secure(value){
-		this.parameters.secure = value;
-	}
+//#region throws or private actions or variables
 
 	set then (v: (func: (thisArg: SuperCookie) => void) => void) {
 		throw "then is read only"
 	}
 
-	get __listeners() {
+	private get __listeners() {
 		return SuperCookie.__listeners
 	}
 
@@ -333,6 +346,9 @@ export default class SuperCookie<V = any>{
 		}
 		this.__thenHolder = func
 	}
+	// #endregion
+
+	// #region methods
 
 	addEventListener(listener: (event: TargetedSuperCookieEvent) => void){
 		const l = (evt: CookieEvent) => {
@@ -376,7 +392,9 @@ export default class SuperCookie<V = any>{
 
 	delete = () => {
 		return SuperCookie.delete(this.name, {path: this.path, domain: this.domain})
-	}	
+	}
+
+	deleteSync = () => this.setSync({expires: null})
 
 	equals = (cookie: CookieStoreGetReturn | SuperCookieSetOptions) =>  SuperCookie.equals(this, cookie)
 
@@ -455,11 +473,9 @@ export default class SuperCookie<V = any>{
 		}
 		return params.filter((a) => a).join('; ')
 	}
-	
-	valueOf(){
-		return this.parameters()
-	}
+	// #endregion
 
+	//#region Statics
 	static addEventListener <V = any>(listener: (evt: SuperCookieEvent<V>) => void){
 		const val = (evt: CookieEvent) => {
 			listener(new Proxy(evt as unknown as SuperCookieEvent, {
@@ -476,6 +492,7 @@ export default class SuperCookie<V = any>{
 		this.__listeners.set(listener, val)
 		SuperCookie.__cookieStore?.addEventListener('change', val)
 	}
+
 	static copy (name: string, newName: string, {preserveFalsyExpirations}: {preserveFalsyExpirations?: boolean} = {}) {
 		return SuperCookie.get(name).then(({domain, expires, partitioned, path, sameSite, value, secure}) => new SuperCookie(newName, {
 			domain,
@@ -562,7 +579,15 @@ export default class SuperCookie<V = any>{
 		parameters?: Partial<Omit<SuperCookieSetOptions, 'name' | 'value'>>
 	){
 		const {name, value, ...params} = this.__sortFromArgs<V>(nameOrParameters, valueOrParameters, parameters);
-		return SuperCookie.__cookieStore.set(SuperCookie.__formatter.cookie({name, value, ...params}) as CookieStoreSetOptions)
+		const cookieStyle: CookieStoreSetOptions = SuperCookie.__formatter.cookie({name, value, ...params}) as CookieStoreSetOptions
+		const size=new Blob([`${cookieStyle.name}=${cookieStyle.value}`]).size
+		if (size >= 4096){
+			throw "Your cookie is too large! Setting it would result in serious problems!"
+		}
+		if (size > 3800){
+			console.warn(`Your cookie is ${size} bytes, which is approaching the maximum of 4096 bytes. Consider refactoring this cookie.`)
+		}
+		return SuperCookie.__cookieStore.set(cookieStyle)
 	}
 
 	static setSync <SV = any>(params?: SuperCookieInitOptions<SV>): void;
@@ -608,9 +633,9 @@ export default class SuperCookie<V = any>{
 	    }
 	}
 	
-	static get __cookieStore() {return typeof window === 'undefined' ? null : window.cookieStore || null}
+	private static get __cookieStore() {return typeof window === 'undefined' ? null : window.cookieStore || null}
 	
-	static get __dCookie() { return typeof window === 'undefined' ? null : window.document.cookie}
+	private static get __dCookie() { return typeof window === 'undefined' ? null : window.document.cookie}
 	
 	private __prune = <K extends (keyof SuperCookieDefaults<V>)[]>(...args: K): Omit<SuperCookieDefaults<V>, K[number]> => {
 		let superCookie: Omit<SuperCookieDefaults<V>, K[number]>  = this.asObject()
@@ -662,7 +687,7 @@ export default class SuperCookie<V = any>{
 		// #endregion
 		
 		// #region formatter
-		static __formatter: Formatter= new Proxy<Formatter>({} as Formatter, {
+		private static __formatter: Formatter= new Proxy<Formatter>({} as Formatter, {
 			get: <K extends 'superCookie' | 'cookie'>(_t: Formatter, p: K, _r: Formatter) => {
 				if (!['superCookie', 'cookie'].includes(p)){
 					throw new TypeError('Invalid Formatter option attempted')
