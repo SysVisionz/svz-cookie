@@ -25,31 +25,22 @@ new SuperCookie(name)
 * **name**  
 The name of the cookie. This is used to initialize the SupeCookie.  
 
-* **Always Applicable**  
+* **Required to be a Cookie**  
 * **value**  
 type: ***any***  
-This is applied by default either in the SuperCookie declaration or at the moment you pull the cookie. SuperCookie allows you to define this in any format, despite it being a string.
+This is applied by default either in the SuperCookie declaration or at the moment you pull the cookie. SuperCookie allows you to define this in any format, despite it being a string. It is marginally more inclusive then JSON format normally is, including, for instance, Bigint types.
 
 * **cookie**  
 type: ***Object***  
 This is the Supercookie's representation as an object, in the way that is used by the cookieStore functionalities. Value is converted to a SuperCookie formatted string if it's an object.
 
-* **Cookie Attributes**  
+* **Cookie parameters**  
 **NOTE:** The following values can only be retrieved after the initial cookieStore fetch, which is indicated with **SuperCookie.prototype.ready**. Until this is true, they will return **undefined**, unless defined by the SuperCookie declaration.
 
 * **domain**  
 type:***string***  
-* **partitioned**  
-type:***boolean***  
-* **path**  
-type:***string***  
-* **sameSite**  
-type:***boolean***
-* **secure**  
-type:***boolean***  
 
-
-* **Special Attribute: expires**  
+* **expires**  
 type:***Date | number | string | null | false***  
 returns as: ***Date | false***  
 When defined the behavior is different depending on how you do it. ***Date | number | string*** work as a normal Date object definition. ***null | false*** have special behaviors:  
@@ -58,14 +49,30 @@ When defined the behavior is different depending on how you do it. ***Date | num
 **Returning**: if the expiration is more than 300 days into the future, it will return ***false***, otherwise it will return the ***Date*** object of the expiration.  
 **NOTE:** if you wish to override the ***false*** behavior and treat it purely as ***Date***, this can be done by setting **SuperCookie.prototype.preserveFalsyExpirations** to true.
 
+* **partitioned**  
+type:***boolean***  
+* **path**  
+type:***string***  
+* **sameSite**  
+type:***boolean***  
+* **secure**  
+type:***boolean***  
+
+* **cookie**  
+type: ***Object***  
+This is a readonly value returning the cookie in the format used to apply it to cookieStore API. Generally you won't need to use this ever.
+
 * **Parameters**  
+* **parameters**  
+type: ***Object*** | ***() => Object***  
+Retrieves or sets the provided parameters for the cookie of the given **name** in the format of default SuperCookie formatting. 
+
 * **ready**  
 type: ***Boolean***  
 This tells you whether the initial cookieStore fetch has completed.
 
-* **parameters**  
-type: **Object**  
-Retrieves or sets the provided parameters for the cookie of the given **name** in the format of default SuperCookie formatting.
+* **preserveFalsyExpirations**  
+If this is true, it sets the default behavior for the SuperCookie to return the exact expiration instead of false for applicable expirations when examining it.
 
 ## Methods
 
@@ -87,9 +94,13 @@ Copies this cookie into a new SuperCookie with the name given.
 ***() => void***  
 Deletes the targeted cookie  
 
+* **deleteSync**  
+***() => void***  
+Deletes the targeted cookie syncronously  
+
 * **equals**  
 ***(cookie: SuperCookieParameters | CookieStoreReturn) => boolean***  
-Checks if the targeted SuperCookie's values are equal to the provided values in the provided SuperCookie definition object or the return object from a cookieStore get call.
+Checks if the targeted SuperCookie's values are equal to the provided SuperCookie definition object or the return object from a cookieStore get call.
 
 * **get**  
 ***() => Promise<SuperCookieDefaults>***  

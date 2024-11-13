@@ -17,6 +17,6 @@
       "declaration": true,
       "esModuleInterop": true
     },
-    "include": ["test-ts/**/*.ts"],
+    "include": ["test-ts/**/*.ts", "test.d.ts"],
     "exclude": ["node_modules", "dist", "src"]
 }

@@ -14,5 +14,5 @@
       "declaration": true
     },
     "include": ["src/**/*.ts", "index.d.ts"],
-    "exclude": ["/node_modules", "/tests-ts", "/tests", "/dist"]
+    "exclude": ["/node_modules", "/test-ts", "/test", "/dist"]
 }
