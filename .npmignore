@@ -4,4 +4,4 @@
 testsConfig.json
 tsConfig.json
 /index.d.ts
-test.*
+test*
