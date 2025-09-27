@@ -1,3 +1,13 @@
+interface CookieInit {
+    domain?: string | null;
+    expires?: DOMHighResTimeStamp | null;
+    name: string;
+    partitioned?: boolean;
+    path?: string;
+    sameSite?: "lax" | "none" | "strict";
+    value: string;
+}
+
 type CookieStoreGetOptions = {
 	domain?: string,
 	expires?: number,
@@ -26,8 +36,13 @@ interface CookieStoreGetObject {
 	path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string | null
 }
 
+interface CookieListItem {
+    name?: string;
+    value?: string;
+}
 interface CookieEvent extends Omit<Event, 'target'> {
-	changed: (CookieStoreGetObject & {name: string})[]
+	changed: readonly CookieListItem[];
+	deleted: ReadonlyArray<CookieListItem>
 }
 
 export interface SuperCookieInitOptions<V = any> {
@@ -372,7 +387,7 @@ export default class SuperCookie<V = any>{
 			})
 			listener(e)
 		}
-		this.__listeners.set(listener, l)
+		this.__listeners.set(listener, l as unknown as (evt: CookieEvent) => void)
 		SuperCookie.__cookieStore?.addEventListener('change', l)
 	}
 
@@ -490,7 +505,7 @@ export default class SuperCookie<V = any>{
 			}))
 		}
 		this.__listeners.set(listener, val)
-		SuperCookie.__cookieStore?.addEventListener('change', val)
+		SuperCookie.__cookieStore?.addEventListener('change', val as unknown as (evt: CookieEvent) => void)
 	}
 
 	static copy (name: string, newName: string, {preserveFalsyExpirations}: {preserveFalsyExpirations?: boolean} = {}) {
@@ -530,17 +545,17 @@ export default class SuperCookie<V = any>{
 
 	//** Retrieves all cookie elements for this document's cookies as an object of SuperCookies indexed by name. */
 	static getAll(options: {preserveFalsyExpirations?: boolean}): Promise<SuperCookieDefaults[]> { return new Promise((res, rej) => {
-		SuperCookie.__cookieStore.getAll().then((cookies) => {
+		SuperCookie.__cookieStore.getAll().then((cookies: CookieListItem[]) => {
 			const processed = cookies.map((cookie) =>  {
 				for (const i in cookie){
 					if (cookie[i as keyof typeof cookie] === null){
-						delete cookie[i]
+						delete cookie[i as keyof typeof cookie]
 					}
 				}
 				return this.__formatter.superCookie(cookie, options) as SuperCookieDefaults
 			})
 			res(processed)
-    	}).catch((err) => {
+    	}).catch((err: Error) => {
 			rej({message : err?.message || err})
 		})
 	})}
@@ -551,11 +566,11 @@ export default class SuperCookie<V = any>{
 	}
 
 	static getAllSync = (options?: {preserveFalsyExpirations?: boolean}) => {
-		return this.__dCookie.split(';').map((v) => {
+		return this.__dCookie?.split(';')?.map((v) => {
 			const [tname, tvalue] = v.trim().split('=')
 			const {name, value} = this.__formatter.superCookie({name: tname, value: tvalue}, options) as SuperCookieDefaults;
 			return {name, value}
-		})
+		}) || []
 	}
 
 	
@@ -566,7 +581,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	static removeEventListener(listener: (changes: CookieEvent) => void){
-		return SuperCookie.__cookieStore.removeEventListener('change', listener)
+		return SuperCookie.__cookieStore.removeEventListener('change', listener as unknown as (evt: CookieEvent) => void)
 	}
 	
 	static set <V = any> (parameters: SuperCookieSetOptions<V> & {name: string | number}): Promise<void>
@@ -587,7 +602,7 @@ export default class SuperCookie<V = any>{
 		if (size > 3800){
 			console.warn(`Your cookie is ${size} bytes, which is approaching the maximum of 4096 bytes. Consider refactoring this cookie.`)
 		}
-		return SuperCookie.__cookieStore.set(cookieStyle)
+		return SuperCookie.__cookieStore.set(cookieStyle as CookieInit)
 	}
 
 	static setSync <SV = any>(params?: SuperCookieInitOptions<SV>): void;
@@ -660,7 +675,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	// #region to Cookie value
-	private static __cookievalueConvert = (value: any, topLevel?: boolean): string => {
+	private static __cookievalueConvert = (value: any, topLevel?: boolean): string | {[key: string]: any} | string[] => {
 		if (value === undefined){
 			return 'undefined:undefined'
 		}
@@ -755,11 +770,11 @@ export default class SuperCookie<V = any>{
 	// #endregion
 	
 	private static __getAllSimpleSync = <V = any>() => {
-		return this.__dCookie.split(';').reduce((full, v) => {
+		return this.__dCookie?.split(';')?.reduce((full, v) => {
 			const [name, value] = v.trim().split('=') as [SuperCookieDefaults["name"], SuperCookieDefaults["value"]]
 			full[name] = {name, value};
 			return full;
-		}, {} as {[key: string]: SuperCookieDefaults<V>})
+		}, {} as {[key: string]: SuperCookieDefaults<V>}) || {}
 	}
 	
 	private static __sortFromArgs = <V extends any>(
@@ -800,7 +815,7 @@ export default class SuperCookie<V = any>{
 		if (typeof value === 'string' && value === 'undefined:undefined'){
 			return undefined;
 		}
-		const [identifier, ...decodedVal]: string[]=value.split(':')
+		const [identifier, ...decodedVal]: string[]=value?.split(':')
 		value = decodedVal.join(':')
 		// @ts-ignore
 		switch (identifier) {
