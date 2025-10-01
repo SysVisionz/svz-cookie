@@ -137,7 +137,7 @@ export default class SuperCookie<V = any>{
 		// SuperCookies should always have name and value variables from the point they are set, formatted correctly.
 		const curr = SuperCookie.__getAllSimpleSync()[name]
 		if (!value && !curr){
-			throw `SuperCookie must have a value or be an existing cookie.`
+			this.value = null;
 		}
 		this.__pVals = SuperCookie.__formatter.superCookie(value ? {name, value, ...params}: {...curr, ...(value ? {value}: {}), ...params, ...(this.preserveFalsyExpirations === undefined ? {} : {preserveFalsyExpirations: params.preserveFalsyExpirations})}) as SuperCookieDefaults<V>
 		this.set = this.set.bind(this)
@@ -667,7 +667,7 @@ export default class SuperCookie<V = any>{
 			if ([null, undefined].includes(val1) && [null, undefined].includes(val2) ){
 				continue;
 			}
-			else if (typeof val1 !== typeof val2 || (typeof val1 === 'object' ? !this.__compareObject(val1, val2) : val1 !== val2 )){
+			else if (typeof val1 !== typeof val2 || (val1 && typeof val1 === 'object' ? !this.__compareObject(val1, val2) : val1 !== val2 )){
 				return false;
 			}
 		}
