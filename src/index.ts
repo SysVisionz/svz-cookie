@@ -124,7 +124,7 @@ export default class SuperCookie<V = any>{
 	constructor(parameters: Omit<SuperCookieInitOptions<V>, 'name'> & {name: string | number})
 	constructor(name: SuperCookieInitOptions['name'], parameters?: Omit<SuperCookieInitOptions<V>, 'name'>)
 	/** when using this style and not including parameters as the third argument, the value MUST NOT be an object with a key called "value", or this will break. */
-	constructor(name: SuperCookieInitOptions['name'], value: SuperCookieInitOptions["value"], parameters?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>)
+	constructor(name: SuperCookieInitOptions['name'], value?: SuperCookieInitOptions["value"], parameters?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>)
 	constructor(
 		nameOrParameters: string | number | Omit<SuperCookieInitOptions, 'name'> & {name: string | number},
 		valueOrParameters?: V | Partial<Omit<SuperCookieInitOptions, 'name'>>,
@@ -134,8 +134,10 @@ export default class SuperCookie<V = any>{
 		if (!name){
 			throw `SuperCookie always requires a name value.`
 		}
+		this.__pVals.name = name;
+		console.log(this.__pVals)
 		// SuperCookies should always have name and value variables from the point they are set, formatted correctly.
-		const curr = SuperCookie.__getAllSimpleSync()[name]
+		const curr = SuperCookie.__getAllSimpleSync()[name] ?? {name, value}
 		if (!value && !curr){
 			this.value = null;
 		}
@@ -146,7 +148,7 @@ export default class SuperCookie<V = any>{
 			if (cookie && cookie.expires === null){
 				delete cookie.expires
 			}
-			if (!cookie || !this.equals(cookie)){
+			if (!cookie?.value && value){
 				this.set({...cookie, ...this.parameters()}).then(() => {
 					this.__theThenValue?.(this as SuperCookie);
 					this.__thenHolder = null;
@@ -162,17 +164,18 @@ export default class SuperCookie<V = any>{
 		}).catch(err => {
 			console.error(err?.message || err)
 		})
-		if (!name){}
 	}
 
 // #region parameter setters and getters.	
 
-	get name(){
-		return String(this.parameters.name)
-	}
-	
-	set name(value) {
-		throw "name is a read only attribute"
+	nameVal: string;
+
+	set name(_v){
+		throw "name is read only"
+	};
+
+	get name() {
+		return this.__pVals.name
 	}
 	
 	get value(){
@@ -539,7 +542,9 @@ export default class SuperCookie<V = any>{
 
     static get (name: string, options?: {preserveFalsyExpirations?: boolean}) {
 		return new Promise<SuperCookieDefaults>(res => {
-			this.getAll(options).then(cookies => {res(cookies.find(v => v.name === name) || null)})
+			this.getAll(options).then(cookies => {
+				res(cookies.find(v => v.name === name) || {name, value: null})
+			})
 		})
 	}
 
@@ -561,7 +566,7 @@ export default class SuperCookie<V = any>{
 	})}
 
 	static getSync = (cookieName: string, options?: {preserveFalsyExpirations?: boolean}): {name: string, value: string} => {
-		const {name, value} = this.getAllSync(options).find(v => v.name === cookieName)
+		const {name, value} = this.getAllSync(options).find(v => v.name === cookieName) ?? {name: cookieName, value: null}
 		return {name, value}
 	}
 

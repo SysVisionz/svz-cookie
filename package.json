@@ -1,6 +1,6 @@
 {
   "name": "supercookie",
-  "version": "5.0.7",
+  "version": "5.2.0",
   "description": "A tool for managing and creating the most versatile cookies ever seen without all the fuss.",
   "keywords": [
     "cookie",
@@ -9,11 +9,15 @@
     "management"
   ],
   "main": "dist/index.js",
+  "exports": {
+    "require": "./cjs/index.js",
+    "import": "./esm/index.js"
+  },
   "types": "dist/index.d.ts",
   "scripts": {
     "start": "webpack --watch",
-    "build": "tsc",
-    "build-tests": "tsc --p testConfig.json",
+    "build": "tsc && tsc --module commonjs --outdir cjs/ && npm run build-packages",
+    "build-packages": "echo '{\"type\": \"module\"}' > esm/package.json && echo '{\"type\": \"commonjs\"}' > cjs/package.json",    "build-tests": "tsc --p testConfig.json",
     "postinstall": "node dist/postinstall.js",
     "test": "npm run build && xdg-open \"http://localhost:3000\" && node ./test/server.js"
   },

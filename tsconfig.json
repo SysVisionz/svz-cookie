@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-      "outDir": "./dist/",
+      "outDir": "./esm/",
       "target": "es6",
       "skipLibCheck": true,
       "module": "es2020",
