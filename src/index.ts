@@ -653,7 +653,15 @@ export default class SuperCookie<V = any>{
 	    }
 	}
 	
-	private static get __cookieStore() {return typeof window === 'undefined' ? null : window.cookieStore || null}
+	private static get __cookieStore() {return (typeof window === 'undefined' ? null : window.cookieStore || null)
+		|| {
+			get: (value) => 
+		}
+	} 
+
+	private csFallback = {
+		
+	}
 	
 	private static get __dCookie() { return typeof window === 'undefined' ? null : window.document.cookie}
 	
@@ -689,10 +697,8 @@ export default class SuperCookie<V = any>{
 		}
 		switch (value.constructor.name) {
 			case 'Date':
-				return `${value.constructor.name}:${value.toJSON()}`;
+				return `${value.constructor.name}:${value}`;
 				case 'Symbol':
-					return `${value.constructor.name}:${value.toString().substring(7, value.toString().length - 1)}`
-					case 'Boolean':
 						case 'BigInt':
 							return `${value.constructor.name}:${value}`;
 							default:
