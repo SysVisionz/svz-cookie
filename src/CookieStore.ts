@@ -10,7 +10,7 @@ export interface CookieStoreCookie {
     "value": string
 }
 
-export interface SuperCookieCore {
+export interface SuperCookieCore<V extends any = any> {
     domain?: string;
     /** Use Date for an actual date, undefined for session cookies. */
     expires?: Date;
@@ -19,16 +19,21 @@ export interface SuperCookieCore {
     sameSite?: 'strict' | 'lax' | 'none';
     /** this can be used to set the time out from now in ms. It also is the current time to expiration when in a get request. */
     timeToExpiration?: number;
-    value: any
+    value?: V
 }
 
-const doConversion = {
-    to: <V extends any>(val: V): V extends Date | number | string | bigint ? string | number | boolean : any => {
-        if (val === null){
+function doConversionTo<V extends string | number | boolean>(val: V): V
+function doConversionTo(val: Date): `Date:${string}`
+function doConversionTo(val: null): `null:null`
+function doConversionTo(val: bigint): `BigInt:${string}`
+function doConversionTo(val: symbol): `Symbol:${string}`
+function doConversionTo(val: any): string
+function doConversionTo(val: any){
+    if (val === null){
             return 'null:null';
         }
         if (val instanceof Date){
-            return `Date:${(val as Date).toISOString()}`
+            return `Date:${val.toISOString()}`
         }
         switch(typeof val){
             case 'object':
@@ -36,15 +41,26 @@ const doConversion = {
                     case 'Symbol':
                         return `Symbol:${String(val).substring(7,String(val).length-1)}`
                     default:
-                        return doConversion.to(val)
+                        return JSON.stringify(doConversion.to(val))
                 }
             case 'bigint':
                 return `BigInt:${String(val)}`
+            case 'string':
+            case 'number':
+            case 'boolean':
+                return val as string | number | boolean
             default:
-                return val as any
+                try {
+                    return val?.toString()
+                } catch(err) {
+                    throw `invalid type submitted to key: ${val?.prototype?.name}`
+                }
         }
-    },
-    from: (val: {[key: string]: any | any[]}): SuperCookieCore => {
+} 
+
+const doConversion = {
+    to:  doConversionTo,
+    from: (val: {[key: string]: any | any[]}): SuperCookieCore["value"] => {
         for (const i in val){
             if (typeof val[i] === 'string'){
                 const [key, valueof] = val[i].split(':')
@@ -118,77 +134,119 @@ const cookieObject = {
     }
 }
 
-const boop: keyof CookieStore  = ''
-
-interface SuperCookieStore {
-    getSync: (name: string) => CookieStoreCookie
-    get: (...args: Parameters<CookieStore["get"]>) => Promise<SuperCookieCore | {[name: string]: SuperCookieCore}>
-    getAll: () => Promise<{[name: string]: CookieStoreCookie}>
-    getAllSync: () => {[name: string]: CookieStoreCookie}
-    delete: (...args: Parameters<CookieStore["delete"]>) => Promise<boolean | null>
-    deleteSync: (nameOrParameters: string | {name: string, domain: string, path: string}) => void
-    addEventListener<K extends keyof CookieStoreEventMap>(type: K, listener: (this: CookieStore, ev: CookieStoreEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
-    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
-    removeEventListener<K extends keyof CookieStoreEventMap>(type: K, listener: (this: CookieStore, ev: CookieStoreEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
-    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
-}
-
-export default new Proxy<SuperCookieStore>((typeof window === 'undefined' ? {} : cookieStore || {}) as SuperCookieStore, {
-    get: (t, p, r) => {
-        const cStore = t as unknown as CookieStore;
-        switch (p){
-            case 'getSync':
-                return (...args: [string] | [{name: string}]) => {
-                    if (typeof args[0] === 'object'){
-                        if (!args[0].name){
-                            return null
-                        }
-                        return {[args[0].name]: r.getAllSync()[args[0].name] || {}}
-                    }
-                    else {
-                        return {[args[0]]: r.getAllSync()[args[0]] || {}};
-                    }
-                }
-            case 'get':
-                return async (...args: Parameters<CookieStore["get"]>) => {
-                if (t.get){
-                    const full = await cStore.get(...args).then((v) => cookieObject.from(Array.isArray(v) ? v as CookieStoreCookie[] : [v] as CookieStoreCookie[]))
-                    if(typeof args[0] === 'string' || args[0]?.name){
-                        return full[0] || {}
-                    }
-                    if (args[0]?.url){
-                        return full
-                    }
-                    throw "get requires a name string or {name: string, url: string} argument to function."
-                }
-                return r.getSync(...args)
-            }
-            case 'getAllSync':
-                return () => cookieObject.from(window.document.cookie)
-            case 'getAll':
-                return async( ) => {
-                    if (cStore.getAll){
-                        return cStore.getAll().then((v) => cookieObject.from(v as CookieStoreCookie[]))
-                    }
-                    return r.getAllSync()
-                }
-            case 'deleteSync':
-                return (nameOrParameters: string | {name: string, path?: string, domain?: string}) => {
-                    const params = (typeof nameOrParameters === 'string' ? {name: nameOrParameters} : nameOrParameters) as {name: string, path?: string, domain?: string}
-                    window.document.cookie=`${params.name}='';${params.path ? `path=${params.path};` : ''}${params.domain ? `domain=${params.domain};` : ''}Max-Age:-9999`
-                }
-            case 'delete':
-                return async (...args: Parameters<CookieStore["delete"]>) => {
-                    if (cStore.delete){
-                        await cStore.delete(...args)
-                        return !await r.get(...args)
-                    }
-                    r.deleteSync(...args)
-                    return null;
-                }
+function setSync (name: string, value: any): void
+function setSync (name: string, options: Omit<SuperCookieCore, 'name'>): void
+function setSync (name: string, value: any, options: Omit<SuperCookieCore, 'name' | 'value' >): void
+function setSync (options: SuperCookieCore): void
+function setSync (nameOrOptions: string | SuperCookieCore, valueOrOptions?: any, options?: Omit<SuperCookieCore, 'value' | 'name'>) {
+    const isCookieObject = (type: 'name'|'value', val: any) => {
+        if (typeof val !== 'object' || Array.isArray(val)) {
+            return false;
         }
-    },
-    set: () => {
-        throw 'the cookieStore proxy is readonly'
+        if (type === 'name') {
+            return true;
+        }
+        const keys = Object.keys(value)
+        return keys.every(v => ['domain', 'partitioned', 'path', 'sameSite', 'value'].includes(v))
+    }
+    const {name, value}: SuperCookieCore & {name: string} = {
+        ...options,
+        name: (isCookieObject('name', nameOrOptions) ? (nameOrOptions as {name: string}).name : nameOrOptions) as string,
+        value: isCookieObject('value', valueOrOptions) ? valueOrOptions.value : valueOrOptions as string,
+    }
+    if (typeof window !== 'undefined') {
+        document.cookie = `${name}=${encodeURIComponent(doConversion.to(value))}${Object.keys(options).length ? '' : `; ${Object.entries(options).reduce((strings: string[], [key, value]) => {
+            const v = value instanceof Date ? value.toISOString() : value as string | number | boolean
+            strings.push(`${key}=${v}`)
+            return strings
+        }, [] as string[]).join('; ')}`}`
     }
 }
+
+function set (name: string, value: any): Promise<boolean>
+function set (name: string, options: Omit<SuperCookieCore, 'name'>): Promise<boolean>
+function set (name: string, value: any, options: Omit<SuperCookieCore, 'name' | 'value' >): Promise<boolean>
+function set (options: SuperCookieCore): Promise<boolean>
+function set (nameOrOptions: string | SuperCookieCore, valueOrOptions?: any, options?: Omit<SuperCookieCore, 'value' | 'name'>) {
+    return new Promise((res,rej) => {
+        const isCookieObject = (type: 'name'|'value', val: any) => {
+            if (typeof val !== 'object' || Array.isArray(val)) {
+                return false;
+            }
+            if (type === 'name') {
+                return true;
+            }
+            const keys = Object.keys(value)
+            return keys.every(v => ['domain', 'partitioned', 'path', 'sameSite', 'value'].includes(v))
+        }
+        const {name, value, ...opts}: SuperCookieCore & {name: string} = {
+            ...options,
+            name: (isCookieObject('name', nameOrOptions) ? (nameOrOptions as {name: string}).name : nameOrOptions) as string,
+            value: isCookieObject('value', valueOrOptions) ? valueOrOptions.value : valueOrOptions as string,
+        }
+        const expires = (opts.expires ? opts.expires
+        : opts.timeToExpiration ? new Date(Date.now() + opts.timeToExpiration)
+        : undefined)?.getTime()
+        const {domain, partitioned, path, sameSite} = opts
+        const cookieObj = {
+            name,
+            value,
+            ...(expires ? {expires} : {}),
+            ...(domain ? {domain} : {}),
+            ...(partitioned ? {partitioned}: {}),
+            ...(path ? {path}: {}),
+            ...(sameSite ? {sameSite} : {})
+        }
+        if (SuperCookieStore.cStore?.set){
+            SuperCookieStore.cStore.set(cookieObj).then(async () => {
+                return !!(await SuperCookieStore.get(cookieObj))
+            })
+        } else {
+            SuperCookieStore.setSync(name, value, opts)
+            res(true)
+        }
+    })
+}
+
+
+const SuperCookieStore = {
+    cStore: cookieStore,
+    getSync: function (name: string): SuperCookieCore {
+        return SuperCookieStore.getAllSync()[name] || {};
+    },
+    get: async (...args: Parameters<CookieStore["get"]>) => {
+        if (SuperCookieStore.cStore?.get){
+            const full = await SuperCookieStore.cStore.get(...args).then((v) => cookieObject.from(Array.isArray(v) ? v as CookieStoreCookie[] : [v] as CookieStoreCookie[]))
+            if(typeof args[0] === 'string' || args[0]?.name){
+                return full[0] || {}
+            }
+            if (args[0]?.url){
+                return full
+            }
+            throw "get requires a name string or {name: string, url: string} argument to function."
+        }
+        return SuperCookieStore.getSync(args[0] as string)
+    },
+    getAllSync:() => cookieObject.from(window.document.cookie),
+    getAll: async( ) => {
+        if (SuperCookieStore.cStore.getAll){
+            return SuperCookieStore.cStore.getAll().then((v) => cookieObject.from(v as CookieStoreCookie[]))
+        }
+        return SuperCookieStore.getAllSync()
+    },
+    setSync,
+    deleteSync: (nameOrParameters: string | {name: string, path?: string, domain?: string}) => {
+            const params = (typeof nameOrParameters === 'string' ? {name: nameOrParameters} : nameOrParameters) as {name: string, path?: string, domain?: string}
+            window.document.cookie=`${params.name}='';${params.path ? `path=${params.path};` : ''}${params.domain ? `domain=${params.domain};` : ''}Max-Age:-9999`
+        },
+    delete: async (...args: Parameters<CookieStore["delete"]>) => {
+        if (SuperCookieStore.cStore.delete){
+            await SuperCookieStore.cStore.delete(...args)
+            return !await SuperCookieStore.get(...args)
+        }
+        SuperCookieStore.deleteSync(...args)
+        return null;
+    }
+}
+
+export default SuperCookieStore

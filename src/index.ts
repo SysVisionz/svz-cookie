@@ -1,141 +1,33 @@
-interface CookieInit {
-    domain?: string | null;
-    expires?: DOMHighResTimeStamp | null;
-    name: string;
-    partitioned?: boolean;
-    path?: string;
-    sameSite?: "lax" | "none" | "strict";
-    value: string;
+import SuperCookieStore, {SuperCookieCore<V>} from './CookieStore'
+
+interface SuperCookieChangeEvent extends Event {
+	readonly changed: ReadonlyArray<SuperCookie>;
+	readonly deleted: ReadonlyArray<SuperCookie>;
 }
 
-type CookieStoreGetOptions = {
-	domain?: string,
-	expires?: number,
-	name: string,
-	partitioned?: boolean,
-	path?: string,
-	sameSite?: 'strict' | 'lax' | 'none',
-	secure?: boolean,
-	value?: string
-}
+type SuperCookieEventHandler = (event: SuperCookieChangeEvent) => void
 
-type CookieStoreSetOptions = Partial<CookieStoreGetObject> & {
-	name: string
-}
+const SCOptions = ["domain", "expires", "name", "partitioned", "path","sameSite","value", "onReady"]
 
-type CookieStoreDeleteOptions = {
-	name: string,
-	domain?: string
-	path?: string,
-	partitioned?: boolean,
-}
-
-interface CookieStoreGetObject {
-	name: string,
-	domain: string | null, expires: number | null, partitioned: boolean,
-	path: string, sameSite: 'strict' | 'lax' | 'none', secure: boolean, value: string | null
-}
-
-interface CookieListItem {
-    name?: string;
-    value?: string;
-}
-interface CookieEvent extends Omit<Event, 'target'> {
-	changed: readonly CookieListItem[];
-	deleted: ReadonlyArray<CookieListItem>
-}
-
-export interface SuperCookieInitOptions<V = any> {
-	domain?: string,
-	/** 
-	 * string will be processed into a Date Object then into a number.
-	 * number will be used as provided.
-	 * Date will be converted to a number.
-	 * null will be converted to 0, deleting the cookie.
-	 * false will be converted to 34560000000 (400 days), which is the maximum cookie lifespan.
-	 * Note that when converting back from a cookie, values of greater than 25920000000 (300 days) will be assumed to be equivalent to false.
-	 * If you wish to skip this conversion, set preserveFalsyExpirations to true.
-	 */
-	expires?: Date | number | string | null | false,
-	/** always converts to string */
-	name: string | number,
-	partitioned?: boolean,
-	path?: string,
-	sameSite?: 'strict' | 'lax' | 'none',
-	secure?: boolean,
-	value?: V,
-	preserveFalsyExpirations?: boolean
-	onReady?: () => void
-}
-
-const SCOptions = ["domain", "expires", "name", "partitioned", "path","sameSite","secure","value","preserveFalsyExpirations","onReady"]
-
-interface SuperCookieSetOptions<V = any> extends Omit<SuperCookieInitOptions<V>, 'name' | 'value'> {
-	name?: string | number
-	value?: V
-}
-
-interface SuperCookieDefaults<V = any> extends Omit<SuperCookieSetOptions<V>, 'expires' | 'name' >{
-	expires?: Date | false
-	name: string
-}
-
-interface CookieStoreGetReturn extends Omit<CookieStoreSetOptions, 'value' | 'expires' | 'name' | "preserveFalsyExpirations" >{
-	expires: string,
-	name: string,
-	value: string
-}
-
-type DirectFormatter<K extends 'cookie' | 'superCookie'> = (cookie: (K extends 'superCookie' ? Partial<CookieStoreGetReturn> | Partial<SuperCookieInitOptions> : Partial<SuperCookieInitOptions>), options?: {preserveFalsyExpirations?: boolean}) => (K extends "cookie" ? Partial<CookieStoreSetOptions>
-	: K extends "superCookie" ? Partial<SuperCookieDefaults>
-	: never)
-
-interface Formatter<V = any> {
-	cookie: {
-		(...args: Parameters<DirectFormatter<'cookie'>> ): ReturnType<DirectFormatter<'cookie'>>,
-	} & Omit<{
-		[K in keyof CookieStoreSetOptions]: (value: CookieStoreSetOptions[K]) => CookieStoreSetOptions[K]
-	}, 'expires' | 'value'> & {
-		'value': (value: V | string) => SuperCookieDefaults<V>["value"]
-		'expires': (value: CookieStoreSetOptions['expires'], preserveFalsyExpirations?: boolean) => number
-	}
-	superCookie: {
-		(...args: Parameters<DirectFormatter<'superCookie'>>): ReturnType<DirectFormatter<'superCookie'>>
-	} & Omit<{ 
-		[K in keyof (CookieStoreSetOptions | CookieStoreGetReturn)]: (value: CookieStoreSetOptions[K] | CookieStoreGetReturn[K]) => SuperCookieDefaults[K]
-	}, 'expires' | 'value' > & {
-		'value': (value: V | string) => SuperCookieDefaults<V>["value"]
-		'expires': (value: CookieStoreSetOptions['expires'], preserveFalsyExpirations?: boolean) => SuperCookieDefaults<V>["expires"]
-	}
-}
-
-interface SuperCookieEvent<V = any> extends Omit<CookieEvent, 'changed'> {
-	changed: SuperCookieDefaults<V>[]
-}
-
-interface TargetedSuperCookieEvent<V = any> extends SuperCookieEvent<V>{
-	change: SuperCookieDefaults<V>
-}
 
 export default class SuperCookie<V = any>{
-	private __pVals: SuperCookieDefaults<V> = {} as SuperCookieDefaults<V>;
-	private static __listeners: Map<(event: SuperCookieEvent) => void, (evt: CookieEvent) => void> = new Map();
+	private __pVals: SuperCookieCore<V>
+	private static __listeners: Map<(event: SuperCookieChangeEvent) => void, (evt: CookieChangeEvent) => void> = new Map();
 	
-	constructor(parameters: Omit<SuperCookieInitOptions<V>, 'name'> & {name: string | number})
-	constructor(name: SuperCookieInitOptions['name'], parameters?: Omit<SuperCookieInitOptions<V>, 'name'>)
+	constructor(parameters: {name: string} & SuperCookieCore<V>)
+	constructor(name: string, parameters: SuperCookieCore<V>, )
 	/** when using this style and not including parameters as the third argument, the value MUST NOT be an object with a key called "value", or this will break. */
-	constructor(name: SuperCookieInitOptions['name'], value?: SuperCookieInitOptions["value"], parameters?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>)
+	constructor(name: string, value?: SuperCookieCore<V>["value"], parameters?: Partial<Omit<SuperCookieCore<V>, 'name' | 'value'>>)
 	constructor(
-		nameOrParameters: string | number | Omit<SuperCookieInitOptions, 'name'> & {name: string | number},
-		valueOrParameters?: V | Partial<Omit<SuperCookieInitOptions, 'name'>>,
-		parameters?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>
+		nameOrParameters: string | number | Omit<SuperCookieCore<V>, 'name'> & {name: string | number},
+		valueOrParameters?: V | Partial<Omit<SuperCookieCore<V>, 'name'>>,
+		parameters?: Partial<Omit<SuperCookieCore<V>, 'name' | 'value'>>
 	){
-		const {name, value, ...params}: {name: string, value: SuperCookieInitOptions<V>['value']} & SuperCookieInitOptions = SuperCookie.__sortFromArgs<V>(nameOrParameters, valueOrParameters, parameters)
+		const {name, value, ...params}: {name: string, value: SuperCookieCore<V>['value']} & SuperCookieCore<V> = SuperCookie.__sortFromArgs<V>(nameOrParameters, valueOrParameters, parameters)
 		if (!name){
 			throw `SuperCookie always requires a name value.`
 		}
 		this.__pVals.name = name;
-		console.log(this.__pVals)
 		// SuperCookies should always have name and value variables from the point they are set, formatted correctly.
 		const curr = SuperCookie.__getAllSimpleSync()[name] ?? {name, value}
 		if (!value && !curr){
@@ -179,7 +71,7 @@ export default class SuperCookie<V = any>{
 	}
 	
 	get value(){
-		return this.parameters.value 
+		return this.parameters.value || SuperCookieStore.getSync(this.name)?.value
 	}			
 	
 	set value(value){
@@ -428,12 +320,12 @@ export default class SuperCookie<V = any>{
 		SuperCookie.__cookieStore?.removeEventListener('change', val)
 	}
 
-	set <SV = V> (parameters?: Omit<SuperCookieInitOptions<V>, 'name'>): Promise<void>
+	set <SV = V> (parameters?: Omit<SuperCookieCore<V><V>, 'name'>): Promise<void>
 	/** when using this style and not including parameters as the second argument, the value MUST NOT be an object with a key called "value", or this will break. */
 	set <SV = V>(value?: SuperCookieSetOptions["value"], parameters?: Partial<Omit<SuperCookieSetOptions, 'name' | 'value'>>): Promise<void>
 	set <SV = V>(
-		valueOrParameters?: SV | Partial<Omit<SuperCookieInitOptions<SV>, 'name'>>,
-		parameters?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>
+		valueOrParameters?: SV | Partial<Omit<SuperCookieCore<V><SV>, 'name'>>,
+		parameters?: Partial<Omit<SuperCookieCore<V>, 'name' | 'value'>>
 	){
 		this.ready = false;
 		if (!valueOrParameters){
@@ -461,9 +353,9 @@ export default class SuperCookie<V = any>{
 		})
 	}
 
-	setSync <SV = V>(parameters?: Omit<SuperCookieInitOptions<SV>, 'name'>): void;
-	setSync <SV = V>(value: any, parameters?: Omit<SuperCookieInitOptions<SV>, 'name' | 'value'>): void 
-	setSync <SV = V>(valueOrParameters?: any | Omit<SuperCookieInitOptions<SV>, 'name'>, parameters?: Omit<SuperCookieInitOptions<SV>, 'name' | 'value'>) {
+	setSync <SV = V>(parameters?: Omit<SuperCookieCore<V><SV>, 'name'>): void;
+	setSync <SV = V>(value: any, parameters?: Omit<SuperCookieCore<V><SV>, 'name' | 'value'>): void 
+	setSync <SV = V>(valueOrParameters?: any | Omit<SuperCookieCore<V><SV>, 'name'>, parameters?: Omit<SuperCookieCore<V><SV>, 'name' | 'value'>) {
 		SuperCookie.setSync(this.name as string, valueOrParameters, parameters)
 	}
 	
@@ -610,14 +502,14 @@ export default class SuperCookie<V = any>{
 		return SuperCookie.__cookieStore.set(cookieStyle as CookieInit)
 	}
 
-	static setSync <SV = any>(params?: SuperCookieInitOptions<SV>): void;
-	static setSync <SV = any>(name: string, params?: Omit<SuperCookieInitOptions<SV>, 'name'>): void;
-	static setSync <SV = any>(name: string, value: SV, params?: Omit<SuperCookieInitOptions<SV>, 'name' | 'value'>): void 
-	static setSync <SV = any>(nameOrParameters: string | SuperCookieInitOptions<SV>, valueOrParameters?: SV | Omit<SuperCookieInitOptions<SV>, 'name'>, parameters?: Omit<SuperCookieInitOptions<SV>, 'name' | 'value'>) {
+	static setSync <SV = any>(params?: SuperCookieCore<V><SV>): void;
+	static setSync <SV = any>(name: string, params?: Omit<SuperCookieCore<V><SV>, 'name'>): void;
+	static setSync <SV = any>(name: string, value: SV, params?: Omit<SuperCookieCore<V><SV>, 'name' | 'value'>): void 
+	static setSync <SV = any>(nameOrParameters: string | SuperCookieCore<V><SV>, valueOrParameters?: SV | Omit<SuperCookieCore<V><SV>, 'name'>, parameters?: Omit<SuperCookieCore<V><SV>, 'name' | 'value'>) {
 		const {name, value, ...params} = this.__formatter.cookie(this.__sortFromArgs<SV>(nameOrParameters, valueOrParameters, parameters))
 		if (name && value){
 			// #region setting Cookie
-			// This is necessary because the cookieStore API set funcname: string, value: SuperCookieInitOptions<SV>['value']} & SuperCookieInitOptions<SV>tionality operates exclusively as a promise, and we require a synchronous operation.
+			// This is necessary because the cookieStore API set funcname: string, value: SuperCookieCore<V><SV>['value']} & SuperCookieCore<V><SV>tionality operates exclusively as a promise, and we require a synchronous operation.
 			let cookieString = name + '=' + encodeURIComponent(value) + ';';
 			if (params){
 				const theParams = SuperCookie.__formatter.cookie(params)
@@ -789,20 +681,20 @@ export default class SuperCookie<V = any>{
 	}
 	
 	private static __sortFromArgs = <V extends any>(
-		nameOrParameters?: string | number | (Omit<SuperCookieInitOptions, 'name'> & {name: string | number}),
-		valueOrParameters?: Partial<Omit<SuperCookieInitOptions, 'name'>> | any,
-		params?: Partial<Omit<SuperCookieInitOptions, 'name' | 'value'>>
+		nameOrParameters?: string | number | (Omit<SuperCookieCore<V>, 'name'> & {name: string | number}),
+		valueOrParameters?: Partial<Omit<SuperCookieCore<V>, 'name'>> | any,
+		params?: Partial<Omit<SuperCookieCore<V>, 'name' | 'value'>>
 	): Partial<Omit<SuperCookieDefaults<V>, "name" | 'value'>> & {name: string, value: V} => {
 		if (!nameOrParameters){
 			return null
 		}
 		const name: string = !(typeof nameOrParameters === 'object') ? String(nameOrParameters) : String(nameOrParameters.name)
-		const value: SuperCookieInitOptions<V>["value"] = params
+		const value: SuperCookieCore<V><V>["value"] = params
 		? valueOrParameters
 		: typeof valueOrParameters === 'object'
 			? Object.keys(valueOrParameters).every(v => SCOptions.includes(v)) ? valueOrParameters.value : valueOrParameters
 			: valueOrParameters
-		const parameters: SuperCookieInitOptions = params ? params : typeof nameOrParameters === 'object' ? nameOrParameters : (valueOrParameters as Omit<SuperCookieInitOptions<V>, 'name'>)?.value && valueOrParameters
+		const parameters: SuperCookieCore<V> = params ? params : typeof nameOrParameters === 'object' ? nameOrParameters : (valueOrParameters as Omit<SuperCookieCore<V><V>, 'name'>)?.value && valueOrParameters
 		return {name, value, ...parameters} as Partial<Omit<SuperCookieDefaults<V>, "name" | 'value'>> & {name: string, value: V}
 	}
 
